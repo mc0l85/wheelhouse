@@ -24,13 +24,13 @@ type Key = [string, string, string];
 // parses that and re-encodes per pane). Alt+M is the ESC-prefixed legacy form.
 const SHORTCUTS: Key[] = [
   ["Ctrl+C", "interrupt", "\x03"],
-  ["Enter", "", "\r"],
   ["Ctrl+Enter", "", "\x1b[13;5u"],
   ["Esc", "", "\x1b"],
   ["Ctrl+Esc", "", "\x1b[27;5u"],
   ["Alt+M", "", "\x1bm"],
 ];
 const KEYS: Key[] = [
+  ["Enter", "", "\r"],
   ["Tab", "", "\t"],
   ["Newline", "Alt+Enter", "\x1b\r"],
 ];
