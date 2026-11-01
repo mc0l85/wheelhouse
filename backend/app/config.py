@@ -54,6 +54,8 @@ class Settings:
     push_extra_hosts: list[str] = field(default_factory=lambda: _csv("HERDRWEB_PUSH_HOSTS", ""))
     push_max_subs: int = int(os.environ.get("HERDRWEB_PUSH_MAX_SUBS", "20"))
     push_private: bool = os.environ.get("HERDRWEB_PUSH_PRIVATE", "0") == "1"
+    # Pasted images are saved under <state_dir>/uploads (kept 7 days / 200 files).
+    upload_max_mb: int = int(os.environ.get("HERDRWEB_UPLOAD_MAX_MB", "20"))
     # Built SPA (vite build output). Served as static when present.
     static_dir: str = os.environ.get(
         "HERDRWEB_STATIC", os.path.join(os.path.dirname(__file__), "..", "static"))

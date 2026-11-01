@@ -8,6 +8,7 @@ import { ArrowRow, ComboRow, KeyRow, type Mods, noBlur, ShortcutRow } from "./co
 import { PaneSelector, paneName } from "./components/PaneSelector";
 import { type HerdrEvent, useHerdrEvents } from "./hooks/useHerdrEvents";
 import { type ConnState, copyText, useHerdrTerminal } from "./hooks/useHerdrTerminal";
+import { pasteImage, readClipboard } from "./paste";
 
 // herdr renders its own workspace/tab/pane chrome inside the TUI, so the page is
 // one slim bar (pane selector · Controls) over a full-bleed live herdr terminal.
@@ -48,8 +49,11 @@ export default function App() {
   const onConn = useCallback((s: ConnState) => {
     if (s === "restored") { flash("reconnected ✓"); setConn("open"); } else setConn(s);
   }, [flash]);
+  const onPasteImage = useCallback((img: Blob) => {
+    void pasteImage(img, (t) => apiRef.current?.paste(t), flash);
+  }, [flash]);   // apiRef is read at call time (declared just below)
   const { hostRef, apiRef } = useHerdrTerminal(session, interactive, true,
-    (n) => flash(`copied ${n} chars ✓`), onConn);
+    (n) => flash(`copied ${n} chars ✓`), onConn, onPasteImage);
 
   // A sticky modifier lives in the terminal effect; a new session resets it.
   useEffect(() => { setMods({ ctrl: false, alt: false }); }, [session]);
@@ -182,8 +186,10 @@ export default function App() {
 
   async function paste() {
     try {
-      const text = await navigator.clipboard.readText();
-      if (text) apiRef.current?.paste(text);
+      const { image, text } = await readClipboard();
+      if (image) onPasteImage(image);
+      else if (text) apiRef.current?.paste(text);
+      else flash("clipboard is empty", true);
     } catch {
       flash("paste blocked — use Ctrl+Shift+V", true);
     }

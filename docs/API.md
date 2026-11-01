@@ -31,6 +31,14 @@ Interactive docs: `/docs` (OpenAPI).
 `POST /api/panes/{id}/send-text` `{"text"}` · `send-keys` `{"keys":["Enter"]}` ·
 `run` `{"command"}` · `split` · `rename` · `focus` · `zoom` `{"mode":"toggle"}` · `close`
 
+## Image upload (needs `HERDRWEB_ENABLE_WRITES=1`)
+
+`POST /api/upload/image` with the raw image as the body (PNG, JPEG, GIF or WebP,
+checked from the bytes; up to `HERDRWEB_UPLOAD_MAX_MB`, default 20) →
+`{path, bytes, type}`. The file lands in `<HERDRWEB_STATE_DIR>/uploads/`; files
+older than 7 days, or past the newest 200, are pruned on the next upload. **415**
+for anything else, **413** when too large. The page pastes `path` into the pane.
+
 ## Push notifications
 
 | Method | Path | Body / returns |

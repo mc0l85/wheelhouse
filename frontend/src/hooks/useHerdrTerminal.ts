@@ -5,6 +5,7 @@
 //    Shift-drag still makes a native xterm selection and is copied on mouse-up.
 //  • Paste (Ctrl+Shift+V / Shift+Insert / Cmd+V) rides the browser's native paste
 //    event → term.paste() (bracketed paste, no clipboard-read permission prompt).
+//    An image on the clipboard goes to onPasteImage instead (see paste.ts).
 //  • Keystrokes go out as BINARY (so "1" isn't mistaken for a JSON control frame).
 //  • Exposes an imperative API (apiRef) so an on-screen key bar can send Esc/Tab/
 //    arrows/Ctrl-combos — essential on iOS/Android, which have no Ctrl/Esc keys.
@@ -15,6 +16,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { clipboardImage } from "../paste";
 
 // Clipboard write that survives non-gesture / insecure-context callers: async
 // Clipboard API first, then a synchronous hidden-textarea execCommand fallback.
@@ -89,6 +91,7 @@ export function useHerdrTerminal(
   session: string, interactive: boolean, mouseToHerdr: boolean,
   onCopied?: (chars: number) => void,
   onConn?: (s: ConnState) => void,
+  onPasteImage?: (img: Blob) => void,
 ) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<TermApi | null>(null);
@@ -96,6 +99,8 @@ export function useHerdrTerminal(
   copiedRef.current = onCopied;
   const connRef = useRef(onConn);
   connRef.current = onConn;
+  const pasteImgRef = useRef(onPasteImage);
+  pasteImgRef.current = onPasteImage;
   // Read through a ref so a writes-flag change never tears down the terminal
   // and its WebSocket (that used to happen on every failed health poll).
   const interactiveRef = useRef(interactive);
@@ -179,6 +184,16 @@ export function useHerdrTerminal(
     // can't re-copy a stale selection over herdr's.
     const onMouseUp = () => { if (term.hasSelection()) { copySelection(); term.clearSelection(); } };
     host.addEventListener("mouseup", onMouseUp);
+    // A clipboard image never reaches xterm (it would paste nothing): capture
+    // the paste before xterm's textarea sees it and hand the image up.
+    const onPaste = (e: ClipboardEvent) => {
+      const img = interactiveRef.current ? clipboardImage(e.clipboardData) : null;
+      if (!img || !pasteImgRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+      pasteImgRef.current(img);
+    };
+    host.addEventListener("paste", onPaste, true);
 
     const sendResize = () => {
       // Skip while the container is mid-layout (proposed dims NaN/0).
@@ -405,6 +420,7 @@ export function useHerdrTerminal(
       dataSub.dispose();
       oscSub.dispose();
       host.removeEventListener("mouseup", onMouseUp);
+      host.removeEventListener("paste", onPaste, true);
       ws?.close();
       term.dispose();
       apiRef.current = null;

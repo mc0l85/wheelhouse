@@ -103,7 +103,7 @@ export function Controls(p: Props) {
         <button {...noBlur} className="kb wide" onClick={() => p.onCopy("recent")}>📋 + scrollback</button>
         {writes && <button {...noBlur} className="kb wide" onClick={p.onPaste}>Paste</button>}
       </div>
-      <div className="pop-hint">drag = select + copy · Shift-drag = raw select · Ctrl+Shift+V = paste</div>
+      <div className="pop-hint">drag = select + copy · Shift-drag = raw select · Ctrl+Shift+V = paste (text or image)</div>
       <NotifyRow flash={p.flash} />
       <div className="pop-h">Session</div>
       <div className="pop-info">

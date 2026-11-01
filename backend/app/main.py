@@ -18,7 +18,7 @@ from .config import settings
 from .models import Health
 from .events import hub
 from .origin import origin_ok
-from .routers import events, panes, push, structure, terminal
+from .routers import events, panes, push, structure, terminal, upload
 
 
 app = FastAPI(title="herdr-web", version="0.1.0",
@@ -98,6 +98,7 @@ app.include_router(panes.router)
 app.include_router(terminal.router)
 app.include_router(events.router)
 app.include_router(push.router)
+app.include_router(upload.router)
 
 
 @app.websocket("/{path:path}")

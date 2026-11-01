@@ -40,6 +40,18 @@ export const api = {
   sendKeys: (paneId: string, keys: string[]) =>
     j(`/api/panes/${encodeURIComponent(paneId)}/send-keys`, { method: "POST", body: JSON.stringify({ keys }) }),
 
+  // Pasted image → a file on the server; its path is pasted into the pane.
+  uploadImage: async (img: Blob) => {
+    const res = await fetch("/api/upload/image", {
+      method: "POST", body: img, headers: { "Content-Type": img.type || "application/octet-stream" },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail ?? `${res.status} ${res.statusText}`);
+    }
+    return res.json() as Promise<{ path: string; bytes: number; type: string }>;
+  },
+
   // Web Push (not gated by writes: it only tells this browser about blocked agents)
   pushKey: () => j<{ public_key: string; subscribers: number }>("/api/push/key"),
   pushSubscribe: (subscription: PushSubscriptionJSON) =>
