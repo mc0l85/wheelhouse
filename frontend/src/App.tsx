@@ -186,12 +186,15 @@ export default function App() {
 
   async function paste() {
     try {
-      const { image, text } = await readClipboard();
+      const { image, text, types } = await readClipboard();
       if (image) onPasteImage(image);
       else if (text) apiRef.current?.paste(text);
-      else flash("clipboard is empty", true);
-    } catch {
-      flash("paste blocked — use Ctrl+Shift+V", true);
+      else flash(types?.length ? `no image or text on the clipboard (${types.join(", ")})` : "clipboard is empty", true);
+    } catch (e) {
+      // iOS: the system "Paste" bubble was dismissed or never tapped.
+      const why = (e as Error).name === "NotAllowedError" ? "not allowed" : (e as Error).message;
+      flash(IS_TOUCH ? `paste ${why} — tap the Paste bubble, or use 🖼 Image…`
+                     : `paste ${why} — use Ctrl+Shift+V`, true);
     }
   }
 
@@ -289,7 +292,7 @@ export default function App() {
       {open === "controls" && (
         <Controls api={apiRef} health={health} paneCount={panes.length} touch={IS_TOUCH}
           mods={mods} setMods={setMods} pinned={pinned} setPinned={setPinned}
-          onCopy={copyPane} onPaste={paste} flash={flash} />
+          onCopy={copyPane} onPaste={paste} onImage={onPasteImage} flash={flash} />
       )}
       {toast && <div className={`toast ${toast.bad ? "bad" : ""}`}>{toast.msg}</div>}
     </div>

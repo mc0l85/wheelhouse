@@ -19,7 +19,7 @@ actually drive agents from the couch.
   10 seconds. Tap again to cancel the Enter. Uses the browser's own speech
   recognition (Safari on iOS: Apple's).
 - **Image paste.** Paste a screenshot (Ctrl+V, Ctrl+Shift+V, Cmd+V, or Controls ›
-  Paste on a phone). The server saves it and pastes its file path, which Claude
+  Paste), or on a phone pick one with Controls › 🖼 Image…. The server saves it and pastes its file path, which Claude
   Code shows as `[Image #1]`; other agents can open the file. Saved under
   `<state dir>/uploads`, kept 7 days.
 - **Blocked-agent inbox.** A ⚠ badge counts agents waiting on you. The inbox shows

@@ -19,6 +19,7 @@ interface Props {
   setPinned: (v: boolean) => void;
   onCopy: (source: "visible" | "recent") => void;
   onPaste: () => void;
+  onImage: (img: Blob) => void;   // a picked photo/file, uploaded like a pasted image
   flash: (msg: string, bad?: boolean) => void;
 }
 
@@ -102,6 +103,17 @@ export function Controls(p: Props) {
         <button {...noBlur} className="kb wide" onClick={() => p.onCopy("visible")}>📋 Copy pane</button>
         <button {...noBlur} className="kb wide" onClick={() => p.onCopy("recent")}>📋 + scrollback</button>
         {writes && <button {...noBlur} className="kb wide" onClick={p.onPaste}>Paste</button>}
+        {/* Phones can't paste an image into a terminal field; pick it instead
+            (iOS offers Photo Library / Take Photo / Files, HEIC arrives as JPEG). */}
+        {writes && (
+          <label {...noBlur} className="kb wide">🖼 Image…
+            <input type="file" accept="image/*" hidden onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) p.onImage(f);
+            }} />
+          </label>
+        )}
       </div>
       <div className="pop-hint">drag = select + copy · Shift-drag = raw select · Ctrl+Shift+V = paste (text or image)</div>
       <NotifyRow flash={p.flash} />

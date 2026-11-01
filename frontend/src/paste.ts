@@ -16,7 +16,8 @@ export function clipboardImage(dt: DataTransfer | null): Blob | null {
 }
 
 // Async Clipboard API read (the Controls › Paste button): image first, else text.
-export async function readClipboard(): Promise<{ image?: Blob; text?: string }> {
+// `types` lists what was on the clipboard when neither was usable.
+export async function readClipboard(): Promise<{ image?: Blob; text?: string; types?: string[] }> {
   if (navigator.clipboard?.read) {
     const items = await navigator.clipboard.read();
     for (const it of items) {
@@ -26,7 +27,7 @@ export async function readClipboard(): Promise<{ image?: Blob; text?: string }> 
     for (const it of items) {
       if (it.types.includes("text/plain")) return { text: await (await it.getType("text/plain")).text() };
     }
-    return {};
+    return { types: items.flatMap((it) => it.types) };
   }
   return { text: await navigator.clipboard.readText() };
 }
