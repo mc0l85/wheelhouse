@@ -51,6 +51,7 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
   const [now, setNow] = useState(Date.now());
   const rec = useRef<Rec | null>(null);
   const timer = useRef(0);
+  const stopping = useRef(false);    // the user tapped stop (vs Safari ending on its own)
   const phRef = useRef(ph);
   phRef.current = ph;
 
@@ -82,36 +83,66 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
     try { target = (await api.panes()).panes.find((p) => p.focused); } catch { /* below */ }
     if (!target) { flash("no focused pane", true); return; }
     await primeMic();
-    const r = new RecImpl();
-    r.lang = navigator.language || "en-US";
-    r.continuous = true;
-    r.interimResults = true;
-    let finalText = "";
-    r.onresult = (e) => {
-      let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const res = e.results[i];
-        if (res.isFinal) finalText += res[0].transcript; else interim += res[0].transcript;
-      }
-      setPh((p) => p.k === "listening" ? { ...p, text: (finalText + interim).trim() } : p);
+    // Safari's recognizer sometimes ends by itself before any words arrive
+    // (silence at the start, an audio hiccup). Until the user taps stop, an
+    // empty ending just starts a fresh recognizer; text already heard is kept
+    // across restarts. Words are held in locals, not React state, so the
+    // last interim result can't be lost to a render that hasn't happened yet.
+    let committed = "";              // text from recognizers that already ended
+    let current = "";                // final + interim text of the live one
+    let restarts = 0;
+    let lastError = "";
+    const began = Date.now();
+    stopping.current = false;
+    const heard = () => (committed + " " + current).trim();
+    const listen = () => {
+      const r = new RecImpl!();
+      r.lang = navigator.language || "en-US";
+      r.continuous = true;
+      r.interimResults = true;
+      let finalText = "";
+      r.onresult = (e) => {
+        let interim = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const res = e.results[i];
+          if (res.isFinal) finalText += res[0].transcript; else interim += res[0].transcript;
+        }
+        current = finalText + interim;
+        setPh((p) => p.k === "listening" ? { ...p, text: heard() } : p);
+      };
+      r.onerror = (e) => {
+        lastError = e.error;
+        if (e.error === "no-speech" || e.error === "aborted") return;
+        flash(e.error === "not-allowed" ? "microphone permission denied" : `speech error: ${e.error}`, true);
+      };
+      r.onend = () => {
+        rec.current = null;
+        if (phRef.current.k !== "listening") return;
+        committed = heard(); current = "";
+        const fatal = lastError === "not-allowed" || lastError === "service-not-allowed";
+        if (!stopping.current && !committed && !fatal && restarts < 20 && Date.now() - began < 60_000) {
+          restarts++;
+          lastError = "";
+          listen();
+          return;
+        }
+        if (!committed) {
+          setPh({ k: "idle" });
+          flash(`heard nothing${lastError ? ` (${lastError})` : ""}`, true);
+          return;
+        }
+        void deliver(target!, committed);
+      };
+      rec.current = r;
+      try { r.start(); } catch (e) { rec.current = null; setPh({ k: "idle" }); flash(`mic failed: ${(e as Error).message}`, true); }
     };
-    r.onerror = (e) => {
-      if (e.error === "no-speech" || e.error === "aborted") return;
-      flash(e.error === "not-allowed" ? "microphone permission denied" : `speech error: ${e.error}`, true);
-    };
-    r.onend = () => {
-      rec.current = null;
-      const p = phRef.current;
-      if (p.k === "listening") void deliver(p.target, finalText || p.text);
-    };
-    rec.current = r;
     setPh({ k: "listening", target, text: "" });
-    try { r.start(); } catch (e) { rec.current = null; setPh({ k: "idle" }); flash(`mic failed: ${(e as Error).message}`, true); }
+    listen();
   }
 
   function tap() {
     if (ph.k === "idle") void start();
-    else if (ph.k === "listening") rec.current?.stop();   // onend delivers
+    else if (ph.k === "listening") { stopping.current = true; rec.current?.stop(); }   // onend delivers
     else {
       clearTimeout(timer.current);
       setPh({ k: "idle" });

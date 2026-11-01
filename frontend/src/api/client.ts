@@ -46,5 +46,6 @@ export const api = {
     j("/api/push/subscribe", { method: "POST", body: JSON.stringify(subscription) }),
   pushUnsubscribe: (endpoint: string) =>
     j("/api/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }) }),
-  pushTest: () => j<{ sent: number; dropped: number; failed: number }>("/api/push/test", { method: "POST" }),
+  pushTest: (delay = 0) => j<{ sent?: number; dropped?: number; failed?: number; scheduled?: number }>(
+    "/api/push/test", { method: "POST", body: JSON.stringify({ delay }) }),
 };

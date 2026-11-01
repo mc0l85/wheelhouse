@@ -42,8 +42,9 @@ function NotifyRow({ flash }: { flash: Props["flash"] }) {
   };
   const test = async () => {
     try {
-      const r = await api.pushTest();
-      flash(r.sent ? `test sent to ${r.sent} device${r.sent > 1 ? "s" : ""} ✓` : "no device received it", !r.sent);
+      // Delayed: iOS may not show a banner for the app that is open on screen.
+      const r = await api.pushTest(5);
+      flash(r.scheduled ? "test in 5 s — lock the phone or go to the Home Screen now" : "no device is subscribed", !r.scheduled);
     } catch (e) { flash(`test failed: ${(e as Error).message}`, true); }
   };
   return (
@@ -54,7 +55,7 @@ function NotifyRow({ flash }: { flash: Props["flash"] }) {
         {st === "off" && <button {...noBlur} className="kb wide" disabled={busy} onClick={() => run(enablePush)}>🔔 Turn on</button>}
         {st === "on" && <>
           <button {...noBlur} className="kb wide on" disabled={busy} onClick={() => run(disablePush)}>🔔 On — turn off</button>
-          <button {...noBlur} className="kb wide" onClick={test}>Send test</button>
+          <button {...noBlur} className="kb wide" onClick={test}>Send test (5 s)</button>
         </>}
       </div>
       {st && <div className="pop-hint">{PUSH_HINT[st]}</div>}

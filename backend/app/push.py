@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import collections
 import json
 import logging
 import os
 import threading
 import time
+import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -134,10 +136,31 @@ def count() -> int:
     return len(_load())
 
 
+# Delivery receipts. A push service's 201 only means it took the message; the
+# service worker posts back once the notification is actually on the screen.
+_sent: dict[str, float] = {}
+_receipts: collections.deque = collections.deque(maxlen=20)
+
+
+def receipt(push_id: str, shown: bool, error: str = "") -> None:
+    t = _sent.get(push_id)
+    _receipts.append({"id": push_id[:16], "shown": bool(shown), "error": error[:200],
+                      "at": time.time(), "after_s": round(time.time() - t, 1) if t else None})
+
+
+def receipts() -> list[dict]:
+    return list(_receipts)
+
+
 def send_all(payload: dict) -> dict:
-    """Blocking. Returns {"sent": n, "dropped": n, "failed": n}."""
+    """Blocking. Returns {"sent": n, "dropped": n, "failed": n, "id": push id}."""
     from pywebpush import WebPushException, webpush   # heavy import, only when used
 
+    push_id = uuid.uuid4().hex[:12]
+    payload = {**payload, "id": push_id}
+    _sent[push_id] = time.time()
+    while len(_sent) > 50:
+        _sent.pop(next(iter(_sent)))
     key = str(_key_path())
     sent = dropped = failed = 0
     gone: list[str] = []
@@ -162,7 +185,7 @@ def send_all(payload: dict) -> dict:
             log.warning("push to %s failed: %s", s["endpoint"][:40], e)
     for ep in gone:
         unsubscribe(ep)
-    return {"sent": sent, "dropped": dropped, "failed": failed}
+    return {"sent": sent, "dropped": dropped, "failed": failed, "id": push_id}
 
 
 def _describe(pane_id: str) -> tuple[bool, str, int]:

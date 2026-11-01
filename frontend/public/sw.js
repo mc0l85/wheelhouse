@@ -18,7 +18,13 @@ self.addEventListener("push", (e) => {
   if (typeof d.blocked === "number" && self.navigator.setAppBadge) {
     jobs.push(self.navigator.setAppBadge(d.blocked).catch(() => {}));
   }
-  e.waitUntil(Promise.all(jobs));
+  // Receipt: tells the server the notification really reached the screen.
+  const receipt = (shown, error) => d.id ? fetch("/api/push/receipt", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: d.id, shown, error: error || "" }),
+  }).catch(() => {}) : Promise.resolve();
+  e.waitUntil(jobs[0].then(() => receipt(true), (err) => receipt(false, String(err)))
+    .then(() => Promise.all(jobs.slice(1))));
 });
 
 self.addEventListener("notificationclick", (e) => {
