@@ -59,7 +59,7 @@ rebinding), and it refuses WebSocket and API calls whose `Origin` is another sit
 Requirements: Linux or macOS with herdr ≥ 0.8, Python ≥ 3.10, Node ≥ 18.
 
 ```bash
-git clone https://github.com/<you>/wheelhouse && cd wheelhouse
+git clone https://github.com/mc0l85/wheelhouse && cd wheelhouse
 deploy/install.sh
 ```
 
