@@ -41,6 +41,9 @@ async function primeMic() {
   } catch { /* denied: the recognizer reports it */ }
 }
 
+let lastRec: Rec | null = null;      // the most recent recognizer, live or not
+let lastEnded = 0;                   // when the last dictation's recognizer finished
+
 type Phase =
   | { k: "idle" }
   | { k: "listening"; target: Pane; text: string }
@@ -52,10 +55,12 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
   const rec = useRef<Rec | null>(null);
   const timer = useRef(0);
   const stopping = useRef(false);    // the user tapped stop (vs Safari ending on its own)
+  const retry = useRef(0);           // pending restart timer between recognizers
+  const wrapUpRef = useRef<(() => void) | null>(null);
   const phRef = useRef(ph);
   phRef.current = ph;
 
-  useEffect(() => () => { rec.current?.abort(); clearTimeout(timer.current); }, []);
+  useEffect(() => () => { rec.current?.abort(); clearTimeout(timer.current); clearTimeout(retry.current); }, []);
   useEffect(() => {
     if (ph.k !== "countdown") return;
     const t = setInterval(() => setNow(Date.now()), 100);
@@ -102,6 +107,7 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
       r.interimResults = true;
       let finalText = "";
       r.onresult = (e) => {
+        if (r !== lastRec) return;     // a stale recognizer from an earlier dictation
         let interim = "";
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const res = e.results[i];
@@ -111,38 +117,65 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
         setPh((p) => p.k === "listening" ? { ...p, text: heard() } : p);
       };
       r.onerror = (e) => {
+        if (r !== lastRec) return;
         lastError = e.error;
         if (e.error === "no-speech" || e.error === "aborted") return;
         flash(e.error === "not-allowed" ? "microphone permission denied" : `speech error: ${e.error}`, true);
       };
       r.onend = () => {
+        if (r !== lastRec) return;
         rec.current = null;
         if (phRef.current.k !== "listening") return;
         committed = heard(); current = "";
         const fatal = lastError === "not-allowed" || lastError === "service-not-allowed";
-        if (!stopping.current && !committed && !fatal && restarts < 20 && Date.now() - began < 60_000) {
+        if (!stopping.current && !committed && !fatal && Date.now() - began < 60_000) {
+          // Back off: right after a dictation Safari's audio session is still
+          // winding down and a new recognizer is "aborted" at once; retrying
+          // instantly just burns through attempts before the mic is free.
+          const wait = Math.min(250 * 2 ** restarts, 2000);
           restarts++;
           lastError = "";
-          listen();
+          retry.current = window.setTimeout(() => {
+            retry.current = 0;
+            if (stopping.current) wrapUp(); else listen();
+          }, wait);
           return;
         }
-        if (!committed) {
-          setPh({ k: "idle" });
-          flash(`heard nothing${lastError ? ` (${lastError})` : ""}`, true);
-          return;
-        }
-        void deliver(target!, committed);
+        wrapUp();
       };
       rec.current = r;
+      lastRec = r;
       try { r.start(); } catch (e) { rec.current = null; setPh({ k: "idle" }); flash(`mic failed: ${(e as Error).message}`, true); }
     };
+    const wrapUp = () => {
+      wrapUpRef.current = null;
+      lastEnded = Date.now();
+      if (!committed) {
+        setPh({ k: "idle" });
+        const why = [lastError, restarts ? `${restarts} retries` : ""].filter(Boolean).join(", ");
+        flash(`heard nothing${why ? ` (${why})` : ""}`, true);
+        return;
+      }
+      void deliver(target!, committed);
+    };
+    wrapUpRef.current = wrapUp;
+    // A recognizer from the previous dictation may still hold the mic.
+    try { lastRec?.abort(); } catch { /* already gone */ }
+    lastRec = null;                  // its late onend/onerror are now ignored
     setPh({ k: "listening", target, text: "" });
-    listen();
+    // Give a just-finished session a moment to release the audio hardware.
+    const sinceLast = Date.now() - lastEnded;
+    if (sinceLast < 1000) await new Promise((ok) => setTimeout(ok, 1000 - sinceLast));
+    if (!stopping.current) listen(); else wrapUp();
   }
 
   function tap() {
     if (ph.k === "idle") void start();
-    else if (ph.k === "listening") { stopping.current = true; rec.current?.stop(); }   // onend delivers
+    else if (ph.k === "listening") {
+      stopping.current = true;
+      if (rec.current) rec.current.stop();                  // onend delivers
+      else if (retry.current) { clearTimeout(retry.current); retry.current = 0; wrapUpRef.current?.(); }
+    }
     else {
       clearTimeout(timer.current);
       setPh({ k: "idle" });

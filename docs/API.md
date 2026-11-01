@@ -38,7 +38,9 @@ Interactive docs: `/docs` (OpenAPI).
 | GET | `/api/push/key` | `{public_key, subscribers}`. `public_key` is the VAPID `applicationServerKey` (base64url). |
 | POST | `/api/push/subscribe` | a `PushSubscription` JSON → `{subscribers}`. 400 unless the endpoint is a browser push service (or in `HERDRWEB_PUSH_HOSTS`). |
 | POST | `/api/push/unsubscribe` | `{"endpoint"}` → `{subscribers}` |
-| POST | `/api/push/test` | sends a test notification to every subscriber → `{sent, dropped, failed}` (needs writes on) |
+| POST | `/api/push/test` | `{"delay": 0-30}` (optional). No delay: sends a test notification to every subscriber → `{sent, dropped, failed, id}`. With a delay: answers at once with `{scheduled, delay}` and sends later, so the phone can be locked first (needs writes on) |
+| POST | `/api/push/receipt` | `{"id", "shown", "error"}`, posted by the service worker once a notification is on screen (or could not be shown) |
+| GET | `/api/push/receipts` | `{receipts: [{id, shown, error, at, after_s}]}`: the last 20, in memory only |
 
 Push payload (JSON, encrypted per RFC 8291):
 `{"title","body","pane_id","blocked":<count of blocked panes>}`.
