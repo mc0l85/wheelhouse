@@ -1,0 +1,18 @@
+# systemd --user unit, installed by deploy/install.sh as
+# ~/.config/systemd/user/herdr-web.service (@APP_DIR@ is filled in).
+[Unit]
+Description=herdr web (Wheelhouse): browser client for herdr
+
+[Service]
+Type=simple
+WorkingDirectory=@APP_DIR@/backend
+EnvironmentFile=%h/.config/herdr-web/env
+Environment=HERDRWEB_STATIC=@APP_DIR@/backend/static
+# herdr lives in ~/.local/bin by default; keep it on PATH for the PTY client.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/sh -c 'exec @APP_DIR@/backend/.venv/bin/uvicorn app.main:app --host "$HERDRWEB_HOST" --port "$HERDRWEB_PORT"'
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

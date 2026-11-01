@@ -1,0 +1,20 @@
+# deps / builds
+frontend/node_modules/
+frontend/dist/
+# build output
+backend/static/
+backend/static.bak*/
+# secrets / local env
+.env
+.env.*
+!.env.example
+backend/.venv/
+venv/
+__pycache__/
+*.pyc
+# local backups
+*.pre-*
+.recovery-*
+
+# public export
+build/
