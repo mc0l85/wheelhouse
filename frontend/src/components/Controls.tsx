@@ -25,6 +25,7 @@ interface Props {
 const PUSH_HINT: Record<PushState, string> = {
   "unsupported": "this browser can't receive push notifications",
   "needs-install": "iPhone/iPad: Share › Add to Home Screen, then open it from there",
+  "no-worker": "the service worker didn't start — close the app and open it again",
   "denied": "blocked in settings — allow notifications for this site/app",
   "off": "get a notification when an agent is blocked, even with the app closed",
   "on": "on — you'll be notified when an agent is blocked",
@@ -45,10 +46,10 @@ function NotifyRow({ flash }: { flash: Props["flash"] }) {
       flash(r.sent ? `test sent to ${r.sent} device${r.sent > 1 ? "s" : ""} ✓` : "no device received it", !r.sent);
     } catch (e) { flash(`test failed: ${(e as Error).message}`, true); }
   };
-  if (!st) return null;
   return (
     <>
       <div className="pop-h">Notifications</div>
+      {!st && <div className="pop-hint">checking…</div>}
       <div className="key-grid">
         {st === "off" && <button {...noBlur} className="kb wide" disabled={busy} onClick={() => run(enablePush)}>🔔 Turn on</button>}
         {st === "on" && <>
@@ -56,7 +57,7 @@ function NotifyRow({ flash }: { flash: Props["flash"] }) {
           <button {...noBlur} className="kb wide" onClick={test}>Send test</button>
         </>}
       </div>
-      <div className="pop-hint">{PUSH_HINT[st]}</div>
+      {st && <div className="pop-hint">{PUSH_HINT[st]}</div>}
     </>
   );
 }

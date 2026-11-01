@@ -2,7 +2,13 @@
 // to the Home Screen (16.4+), and only from a user tap.
 import { api } from "./api/client";
 
-export type PushState = "unsupported" | "needs-install" | "denied" | "off" | "on";
+export type PushState = "unsupported" | "needs-install" | "no-worker" | "denied" | "off" | "on";
+
+// serviceWorker.ready never settles when registration failed; don't wait forever.
+const worker = () => Promise.race([
+  navigator.serviceWorker.ready,
+  new Promise<null>((ok) => setTimeout(() => ok(null), 5000)),
+]);
 
 const standalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches ||
@@ -19,7 +25,8 @@ export async function pushState(): Promise<PushState> {
     return isIOS() && !standalone() ? "needs-install" : "unsupported";
   }
   if (Notification.permission === "denied") return "denied";
-  const reg = await navigator.serviceWorker.ready;
+  const reg = await worker();
+  if (!reg) return "no-worker";
   return (await reg.pushManager.getSubscription()) ? "on" : "off";
 }
 

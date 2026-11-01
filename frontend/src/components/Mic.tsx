@@ -28,6 +28,19 @@ const RecImpl: RecCtor | undefined = typeof window !== "undefined"
     ?? (window as unknown as { webkitSpeechRecognition?: RecCtor }).webkitSpeechRecognition)
   : undefined;
 
+// Safari asks for the microphone on every recognizer start() unless the page
+// already holds a getUserMedia grant, which lasts for the life of the page. Take
+// one on the first tap (and drop the stream at once) so later taps don't prompt.
+let micGranted = false;
+async function primeMic() {
+  if (micGranted || !navigator.mediaDevices?.getUserMedia) return;
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    s.getTracks().forEach((t) => t.stop());
+    micGranted = true;
+  } catch { /* denied: the recognizer reports it */ }
+}
+
 type Phase =
   | { k: "idle" }
   | { k: "listening"; target: Pane; text: string }
@@ -68,6 +81,7 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
     let target: Pane | undefined;
     try { target = (await api.panes()).panes.find((p) => p.focused); } catch { /* below */ }
     if (!target) { flash("no focused pane", true); return; }
+    await primeMic();
     const r = new RecImpl();
     r.lang = navigator.language || "en-US";
     r.continuous = true;

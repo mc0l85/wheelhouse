@@ -42,6 +42,19 @@ async def _origin_gate(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def _cache_policy(request: Request, call_next):
+    """The page, service worker and manifest must revalidate, or a home-screen app
+    keeps running last week's build. Hashed /assets/* files never change."""
+    resp = await call_next(request)
+    path = request.url.path
+    if path.startswith("/assets/"):
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif not path.startswith("/api"):
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 @app.on_event("startup")
 async def _start_events() -> None:
     hub.start()
