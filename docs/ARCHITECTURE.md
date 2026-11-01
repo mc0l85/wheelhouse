@@ -12,6 +12,7 @@
    ├─ herdr.py          herdr CLI (JSON) + control socket for focus/zoom/lists
    ├─ events.py         one events.subscribe stream, fanned out to browsers
    ├─ push.py           VAPID key, subscriptions, "agent blocked" pushes ──┘
+   ├─ routers/upload    pasted images → <state dir>/uploads, path pasted into the pane
    └─ origin.py         same-origin gate for WebSockets and mutating calls
 ```
 

@@ -12,7 +12,7 @@ actually drive agents from the couch.
 - **The real herdr TUI.** The server runs a genuine `herdr` client in a PTY and
   streams it to xterm.js, so nothing is re-implemented and nothing is missing.
 - **Phone keys without the keyboard.** A Controls menu with spelled-out keys and
-  captions: Esc, Tab, Ctrl+C, Ctrl+Enter, Alt+Enter newline, sticky Ctrl/Alt,
+  captions: Esc, Tab, Enter, Ctrl+C, Ctrl+Enter, Alt+Enter newline, sticky Ctrl/Alt,
   arrows, Ctrl combos and symbols, with an optional pinned tray.
 - **Dictation.** Tap 🎤 and speak. Your words go to the pane you started in
   (by pane ID, so a focus change can't misroute them), then Enter follows after
@@ -21,7 +21,8 @@ actually drive agents from the couch.
 - **Image paste.** Paste a screenshot (Ctrl+V, Ctrl+Shift+V, Cmd+V, or Controls ›
   Paste), or on a phone pick one with Controls › 🖼 Image…. The server saves it and pastes its file path, which Claude
   Code shows as `[Image #1]`; other agents can open the file. Saved under
-  `<state dir>/uploads`, kept 7 days.
+  `<state dir>/uploads`, kept 7 days. The path is on the Wheelhouse machine, so an
+  agent running over SSH on another host can't open it.
 - **Blocked-agent inbox.** A ⚠ badge counts agents waiting on you. The inbox shows
   each one's last lines with one-tap answers (Enter, 1/2/3, y/n, Esc, arrows) or
   a reply, all sent to that pane without moving your focus.
@@ -40,14 +41,15 @@ actually drive agents from the couch.
 
 ## ⚠ Security model: there is no login
 
-Anyone who can reach the port can type into every pane, which means **a shell as
-you**. Wheelhouse does not add a password. Instead, keep it off the open
-internet:
-
-- bind it to `127.0.0.1` (the default) behind a reverse proxy on your LAN, or
-- reach it over a mesh VPN (Tailscale, NetBird, Twingate, WireGuard), or
-- if you must use a public tunnel, put an identity gate in front of it
-  (for example Cloudflare Tunnel **plus Cloudflare Access**).
+> [!CAUTION]
+> Anyone who can reach the port can type into every pane, which means **a shell as
+> you**. Wheelhouse does not add a password. Instead,
+> <mark><ins>**keep it off the open internet**</ins></mark>:
+>
+> - bind it to `127.0.0.1` (the default) behind a reverse proxy on your LAN, or
+> - reach it over a mesh VPN (Tailscale, NetBird, Twingate, WireGuard), or
+> - if you must use a public tunnel, put an identity gate in front of it
+>   (for example Cloudflare Tunnel **plus Cloudflare Access**).
 
 **[docs/NETWORKING.md](docs/NETWORKING.md)** walks through each option. Two
 guards stop other web pages from driving it through your browser: the server
@@ -81,14 +83,16 @@ Phones need HTTPS for the microphone, clipboard and push notifications. See
 
 Open the site in Safari, then Share › **Add to Home Screen**, and use that icon.
 Push notifications only work from the home-screen app (Controls › Notifications ›
-Turn on). The first 🎤 tap asks for microphone permission.
+Turn on). The first 🎤 tap asks for microphone permission; iOS asks again after
+each relaunch of the home-screen app (an iOS limit, WebKit bug 215884).
 
 ## Configuration
 
 All settings are environment variables, each documented in
 [`backend/.env.example`](backend/.env.example): herdr binary and session, bind
 address and port, writes on/off, allowed host names and origins, terminal limit,
-and the push settings (state directory, contact, private mode, endpoint hosts).
+the push settings (state directory, contact, private mode, endpoint hosts) and
+the image-paste size limit.
 
 ## How it works
 
