@@ -43,4 +43,4 @@ Interactive docs: `/docs` (OpenAPI).
 | GET | `/api/push/receipts` | `{receipts: [{id, shown, error, at, after_s}]}`: the last 20, in memory only |
 
 Push payload (JSON, encrypted per RFC 8291):
-`{"title","body","pane_id","blocked":<count of blocked panes>}`.
+`{"title","body","pane_id","blocked":<count of blocked panes>,"id":<receipt id>}`.
