@@ -16,7 +16,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { clipboardImage } from "../paste";
+import { clipboardImage, readClipboard } from "../paste";
 
 // Clipboard write that survives non-gesture / insecure-context callers: async
 // Clipboard API first, then a synchronous hidden-textarea execCommand fallback.
@@ -186,12 +186,38 @@ export function useHerdrTerminal(
     host.addEventListener("mouseup", onMouseUp);
     // A clipboard image never reaches xterm (it would paste nothing): capture
     // the paste before xterm's textarea sees it and hand the image up.
+    //  • Ctrl+V is let through as a native paste (see the key handler): an image
+    //    is uploaded, anything else goes to the PTY as ^V like before, so Claude
+    //    Code's own Ctrl+V and a shell's quoted-insert keep working.
+    //  • Chromium's Ctrl+Shift+V is "paste as plain text": an image-only
+    //    clipboard arrives EMPTY, so an empty paste asks the async Clipboard API.
+    let ctrlV = 0;                     // timer: a Ctrl+V paste is expected
+    const ctrlVDone = (sendCtrlV: boolean) => {
+      if (!ctrlV) return;
+      clearTimeout(ctrlV); ctrlV = 0;
+      if (sendCtrlV) raw("\x16");
+    };
     const onPaste = (e: ClipboardEvent) => {
-      const img = interactiveRef.current ? clipboardImage(e.clipboardData) : null;
-      if (!img || !pasteImgRef.current) return;
-      e.preventDefault();
-      e.stopPropagation();
-      pasteImgRef.current(img);
+      const up = interactiveRef.current ? pasteImgRef.current : undefined;
+      const img = up ? clipboardImage(e.clipboardData) : null;
+      if (img && up) {
+        ctrlVDone(false);
+        e.preventDefault(); e.stopPropagation();
+        up(img);
+        return;
+      }
+      if (ctrlV) {
+        ctrlVDone(true);
+        e.preventDefault(); e.stopPropagation();
+        return;
+      }
+      const dt = e.clipboardData;
+      if (up && dt && !dt.types.length && navigator.clipboard?.read) {
+        e.preventDefault(); e.stopPropagation();
+        void readClipboard().then(({ image, text }) => {
+          if (image) up(image); else if (text) term.paste(text);
+        }).catch(() => { /* permission refused: nothing to paste */ });
+      }
     };
     host.addEventListener("paste", onPaste, true);
 
@@ -322,6 +348,13 @@ export function useHerdrTerminal(
       if ((e.code === "KeyV" && ctrl && shift) || (e.code === "Insert" && shift)) {
         // Let the browser fire its native paste event; xterm turns it into
         // term.paste() (bracketed paste). No readText(), no double paste.
+        return false;
+      }
+      if (e.code === "KeyV" && ctrl && !shift && !e.altKey && !cmd && interactiveRef.current) {
+        // Native paste fires next; onPaste uploads an image or sends ^V. If
+        // the browser fires no paste at all, ^V still goes out.
+        clearTimeout(ctrlV);
+        ctrlV = window.setTimeout(() => { ctrlV = 0; raw("\x16"); }, 300);
         return false;
       }
       return true;
