@@ -193,6 +193,10 @@ html, body { position: fixed; inset: 0; overscroll-behavior: none; }
 .mic-head { display: flex; justify-content: space-between; gap: 10px; font: 12px var(--mono); margin-bottom: 6px; }
 .mic-state { color: var(--amber); white-space: nowrap; flex: none; }
 .mic-card.listening .mic-state { color: var(--red); }
+/* starting: Safari hasn't confirmed the mic is capturing yet — don't talk */
+.mic-btn.listening.starting { background: var(--amber); animation: none; opacity: .75; }
+.mic-card.listening.starting { border-color: var(--amber); }
+.mic-card.listening.starting .mic-state { color: var(--amber); }
 .mic-to { color: var(--cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .mic-text {
   font: 500 19px/1.35 var(--font); color: var(--text);

@@ -21,6 +21,7 @@ interface Rec {
   onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;
+  onaudiostart: (() => void) | null;
 }
 type RecCtor = new () => Rec;
 const RecImpl: RecCtor | undefined = typeof window !== "undefined"
@@ -46,7 +47,7 @@ let lastEnded = 0;                   // when the last dictation's recognizer fin
 
 type Phase =
   | { k: "idle" }
-  | { k: "listening"; target: Pane; text: string }
+  | { k: "listening"; target: Pane; text: string; live: boolean }   // live: Safari says the mic is capturing
   | { k: "countdown"; target: Pane; text: string; until: number };
 
 export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
@@ -114,7 +115,13 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
           if (res.isFinal) finalText += res[0].transcript; else interim += res[0].transcript;
         }
         current = finalText + interim;
-        setPh((p) => p.k === "listening" ? { ...p, text: heard() } : p);
+        setPh((p) => p.k === "listening" ? { ...p, text: heard(), live: true } : p);
+      };
+      // The only reliable "you can talk now" signal: until it fires, words are lost.
+      r.onaudiostart = () => {
+        if (r !== lastRec) return;
+        setPh((p) => p.k === "listening" ? { ...p, live: true } : p);
+        navigator.vibrate?.(30);
       };
       r.onerror = (e) => {
         if (r !== lastRec) return;
@@ -133,6 +140,7 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
           // winding down and a new recognizer is "aborted" at once; retrying
           // instantly just burns through attempts before the mic is free.
           const wait = Math.min(250 * 2 ** restarts, 2000);
+          setPh((p) => p.k === "listening" ? { ...p, live: false } : p);
           restarts++;
           lastError = "";
           retry.current = window.setTimeout(() => {
@@ -162,7 +170,7 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
     // A recognizer from the previous dictation may still hold the mic.
     try { lastRec?.abort(); } catch { /* already gone */ }
     lastRec = null;                  // its late onend/onerror are now ignored
-    setPh({ k: "listening", target, text: "" });
+    setPh({ k: "listening", target, text: "", live: false });
     // Give a just-finished session a moment to release the audio hardware.
     const sinceLast = Date.now() - lastEnded;
     if (sinceLast < 1000) await new Promise((ok) => setTimeout(ok, 1000 - sinceLast));
@@ -191,16 +199,16 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
         // Over the top of the terminal (not the bar, too small to read; not the
         // bottom, where the agent's input box shows the delivered text).
         // pointer-events: none — taps fall through to the terminal.
-        <div className={`mic-card ${ph.k}`}>
+        <div className={`mic-card ${ph.k}${ph.k === "listening" && !ph.live ? " starting" : ""}`}>
           <div className="mic-head">
-            <span className="mic-state">{ph.k === "listening" ? "● listening · 🎤 stops" : `Enter in ${Math.ceil(left / 1000)}s · 🎤 cancels`}</span>
+            <span className="mic-state">{ph.k === "listening" ? (ph.live ? "● listening · 🎤 stops" : "starting… wait · 🎤 cancels") : `Enter in ${Math.ceil(left / 1000)}s · 🎤 cancels`}</span>
             <span className="mic-to">→ {paneName(ph.target)}</span>
           </div>
           <div className="mic-text"><span>{ph.text || "…"}</span></div>
           {ph.k === "countdown" && <div className="mic-bar" style={{ transform: `scaleX(${frac})` }} />}
         </div>
       )}
-      <button {...noBlur} data-mic className={`trig mic-btn ${ph.k}`}
+      <button {...noBlur} data-mic className={`trig mic-btn ${ph.k}${ph.k === "listening" && !ph.live ? " starting" : ""}`}
         title={ph.k === "idle" ? "dictate into the focused pane" : ph.k === "listening" ? "tap to stop" : "tap to cancel auto-submit"}
         style={ph.k === "countdown" ? { ["--p" as string]: frac } : undefined}
         onClick={tap}>
