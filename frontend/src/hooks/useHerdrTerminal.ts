@@ -44,6 +44,9 @@ function openLink(uri: string) {
   if (/^https?:\/\//i.test(uri)) window.open(uri, "_blank", "noopener,noreferrer");
 }
 
+// A lone image file path or file:// URL: what a screenshot tool leaves as text.
+const IMAGE_FILE_RE = /^(file:\/\/)?\S+\.(png|jpe?g|gif|webp)$/i;
+
 const MOUSE_RE =/\x1b\[\?(1000|1001|1002|1003|1005|1006|1015|1016)[hl]/g;
 
 export interface TermApi {
@@ -190,7 +193,9 @@ export function useHerdrTerminal(
     //    is uploaded, anything else goes to the PTY as ^V like before, so Claude
     //    Code's own Ctrl+V and a shell's quoted-insert keep working.
     //  • Chromium's Ctrl+Shift+V is "paste as plain text": an image-only
-    //    clipboard arrives EMPTY, so an empty paste asks the async Clipboard API.
+    //    clipboard arrives EMPTY, and a screenshot tool's (KDE Spectacle) arrives
+    //    as just its file URL. Either way, ask the async Clipboard API for the
+    //    image; the text is pasted if there is none.
     let ctrlV = 0;                     // timer: a Ctrl+V paste is expected
     const ctrlVDone = (sendCtrlV: boolean) => {
       if (!ctrlV) return;
@@ -212,11 +217,12 @@ export function useHerdrTerminal(
         return;
       }
       const dt = e.clipboardData;
-      if (up && dt && !dt.types.length && navigator.clipboard?.read) {
+      const plain = dt?.getData("text/plain") ?? "";
+      if (up && dt && navigator.clipboard?.read && (!dt.types.length || IMAGE_FILE_RE.test(plain.trim()))) {
         e.preventDefault(); e.stopPropagation();
         void readClipboard().then(({ image, text }) => {
-          if (image) up(image); else if (text) term.paste(text);
-        }).catch(() => { /* permission refused: nothing to paste */ });
+          if (image) up(image); else if (text || plain) term.paste(text || plain);
+        }).catch(() => { if (plain) term.paste(plain); });   // permission refused
       }
     };
     host.addEventListener("paste", onPaste, true);
