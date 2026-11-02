@@ -22,8 +22,18 @@ window.addEventListener("contextmenu", (e) => e.preventDefault());
 registerServiceWorker();
 watchForUpdates();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+// The canvas renderer measures the cell and caches glyphs the moment the
+// terminal opens. If JetBrains Mono is still loading, it measures and draws the
+// fallback font, and the text comes out mis-sized with a wavy baseline. So load
+// the terminal font first (it is self-hosted; capped at 3 s so a failure only
+// costs a fallback font).
+const termFont = Promise.all(["400", "500"].map((w) => document.fonts.load(`${w} 13px "JetBrains Mono"`)));
+Promise.race([termFont, new Promise((r) => setTimeout(r, 3000))])
+  .catch(() => {})
+  .then(() => {
+    ReactDOM.createRoot(document.getElementById("root")!).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>,
+    );
+  });

@@ -441,6 +441,12 @@ export function useHerdrTerminal(
     window.addEventListener("pageshow", reconnectNow);
     const rafId = requestAnimationFrame(() => connect());
     if (document.fonts?.ready) document.fonts.ready.then(() => sendResize());
+    // A font file that lands after the terminal opened (the 3 s preload cap in
+    // main.tsx, or a unicode-range subset like latin-ext fetched the first time
+    // é appears) leaves fallback-font glyphs in the canvas renderer's cache:
+    // mixed baselines, wavy text. Drop the cache and redraw with the real font.
+    const onFontLoaded = () => { term.clearTextureAtlas(); term.refresh(0, term.rows - 1); sendResize(); };
+    document.fonts?.addEventListener("loadingdone", onFontLoaded);
     const t1 = window.setTimeout(sendResize, 150);
     const t2 = window.setTimeout(sendResize, 600);
 
@@ -454,6 +460,7 @@ export function useHerdrTerminal(
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
       ro.disconnect();
+      document.fonts?.removeEventListener("loadingdone", onFontLoaded);
       host.removeEventListener("touchstart", onTouchStart);
       host.removeEventListener("touchmove", onTouchMove);
       dataSub.dispose();
