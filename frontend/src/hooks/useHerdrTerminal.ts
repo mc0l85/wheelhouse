@@ -130,6 +130,15 @@ export function useHerdrTerminal(
     // Bare http(s) URLs in pane text: underline on hover, click opens a new tab.
     term.loadAddon(new WebLinksAddon((_e, uri) => openLink(uri)));
     term.open(host);
+    // Chrome's own inline writing suggestions / autofill would land in xterm's
+    // hidden textarea and show through its composition view as solid text over
+    // the pane. The terminal app (Claude Code) draws its own suggestions.
+    const ta = term.textarea;
+    if (ta) {
+      ta.setAttribute("writingsuggestions", "false");
+      ta.setAttribute("autocomplete", "off");
+      ta.setAttribute("data-gramm", "false");   // Grammarly-style extensions
+    }
     // The canvas renderer draws box-drawing/block glyphs (herdr's borders and
     // pane scrollbars) as seamless custom glyphs, like a native terminal; the
     // DOM renderer takes them from the font and leaves gaps between rows.
