@@ -231,3 +231,9 @@ html, body { position: fixed; inset: 0; overscroll-behavior: none; }
   background: #04070e; border: 1px solid var(--stroke-strong); border-radius: 8px; padding: 8px 10px;
 }
 .ib-ok { margin-top: 6px; font: 12px var(--mono); color: var(--green); }
+
+/* xterm's DOM renderer drops SGR 2 (dim) when the foreground is an RGB colour:
+   the inline color beats its .xterm-dim class. Fade those spans like the canvas
+   renderer does. [style^="color:"] skips background-only inline styles. */
+.xterm .xterm-rows span.xterm-dim[style^="color:"],
+.xterm .xterm-rows span.xterm-dim[style*=";color:"] { opacity: 0.5 !important; }
