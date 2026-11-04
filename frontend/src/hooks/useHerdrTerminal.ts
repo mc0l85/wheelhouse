@@ -60,6 +60,14 @@ export interface TermApi {
   scrollToBottom: (rect: { x: number; y: number; width: number; height: number }, lines: number) => void;
   fontStep: (delta: number) => number;  // ±px, clamped + remembered; returns new size
   fontSize: () => number;
+  redraw: () => void;                  // save a glitch report, reconnect = full repaint
+}
+
+const RING = 256 * 1024;   // bytes of output kept for a glitch report (matches the backend)
+function b64(bytes: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
 }
 
 const FONT_KEY = "wheelhouse.fontSize";
@@ -264,6 +272,7 @@ export function useHerdrTerminal(
     let pingTimer = 0;
     let pongDeadline = 0;
     let everOpened = false;
+    let ring: Uint8Array[] = [], ringLen = 0;       // what this socket received
     const PING_MS = 15000, PONG_WAIT_MS = 5000;
 
     const sendPing = (waitMs = PONG_WAIT_MS) => {
@@ -324,10 +333,14 @@ export function useHerdrTerminal(
           return;
         }
         clearTimeout(pongDeadline);                  // any output proves liveness
-        const s = dec.decode(new Uint8Array(ev.data), { stream: true });
+        const bytes = new Uint8Array(ev.data);
+        ring.push(bytes); ringLen += bytes.length;
+        while (ringLen - ring[0].length > RING) ringLen -= ring.shift()!.length;
+        const s = dec.decode(bytes, { stream: true });
         term.write(mouseToHerdr ? s : s.replace(MOUSE_RE, ""));
       };
       sock.onopen = () => {
+        ring = []; ringLen = 0;
         if (everOpened) { dec = new TextDecoder(); connRef.current?.("restored"); }
         everOpened = true;
         retry = 0;
@@ -399,6 +412,19 @@ export function useHerdrTerminal(
         return fs;
       },
       fontSize: () => term.options.fontSize ?? FONT_DEFAULT,
+      // A garbled screen: report what this socket received (the backend saves
+      // it beside what herdr sent), then drop the socket. The reconnect is a
+      // fresh herdr client, which repaints everything; other clients are untouched.
+      redraw: () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const all = new Uint8Array(ringLen);
+          let o = 0;
+          for (const c of ring) { all.set(c, o); o += c.length; }
+          try { ws.send(JSON.stringify({ type: "glitch", client: b64(all.subarray(Math.max(0, all.length - RING))) })); } catch { /* reconnect anyway */ }
+        }
+        const dead = ws;
+        window.setTimeout(() => { if (ws === dead) { retry = 0; abandon(); } }, 300);
+      },
     };
 
     // --- touch scrolling (iPad) ------------------------------------------------

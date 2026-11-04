@@ -21,13 +21,18 @@ container; keep the browser window generous to avoid shrinking your terminal.
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import fcntl
 import json
 import os
 import pty
 import signal
 import struct
+import secrets
 import termios
+import time
+from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -50,6 +55,25 @@ def _spawn(session: str, rows: int, cols: int) -> tuple[int, int]:
         os._exit(127)
     _set_winsize(fd, rows, cols)
     return pid, fd
+
+
+_RING = 256 * 1024     # bytes of output kept per client for a glitch report
+_GLITCH_KEEP = 20
+
+
+def _save_glitch(server: bytes, client_b64: str) -> None:
+    """Write <state dir>/glitch/<ts>-server.bin and -client.bin (best effort)."""
+    try:
+        client = base64.b64decode(client_b64, validate=True)
+    except (binascii.Error, ValueError):
+        client = b""
+    d = Path(settings.state_dir).expanduser() / "glitch"
+    d.mkdir(parents=True, exist_ok=True)
+    stamp = f"{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(2)}"
+    (d / f"{stamp}-server.bin").write_bytes(server)
+    (d / f"{stamp}-client.bin").write_bytes(client[:_RING])
+    for old in sorted(d.glob("*.bin"), reverse=True)[_GLITCH_KEEP * 2:]:
+        old.unlink(missing_ok=True)
 
 
 def _set_winsize(fd: int, rows: int, cols: int) -> None:
@@ -124,11 +148,17 @@ async def terminal(ws: WebSocket) -> None:
 
     loop.add_reader(fd, _on_readable)
 
+    # The last bytes herdr sent this client, for a glitch report (see below).
+    ring = bytearray()
+
     async def pump_out() -> None:
         while True:
             data = await out_q.get()
             if not data:
                 break
+            ring.extend(data)
+            if len(ring) > _RING:
+                del ring[:len(ring) - _RING]
             try:
                 await ws.send_bytes(data)
             except Exception:
@@ -173,6 +203,10 @@ async def terminal(ws: WebSocket) -> None:
                 r, c = _clamp(obj.get("rows"), 0), _clamp(obj.get("cols"), 0)
                 if r and c:
                     _set_winsize(fd, r, c)
+            elif obj is not None and obj.get("type") == "glitch":
+                # Controls › Redraw: the screen looked corrupted. Keep what herdr
+                # sent and what the browser received, so the two can be diffed.
+                _save_glitch(bytes(ring), str(obj.get("client", ""))[: _RING * 2])
             elif obj is not None and obj.get("type") == "input":
                 if settings.enable_writes:
                     _write(str(obj.get("data", "")).encode())

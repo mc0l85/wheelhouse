@@ -127,6 +127,14 @@ export function Controls(p: Props) {
         <span>{writes ? "writes ON" : "read-only"}</span>
         <span className="dim">PTY resizes: {termStats.ptyResizes}</span>
       </div>
+      {/* Garbled screen (stray "20;56H", text on the wrong line): reconnect for a
+          full repaint, and save both sides of the byte stream for diagnosis. */}
+      <div className="key-grid">
+        <button {...noBlur} className="kb wide" onClick={() => {
+          p.api.current?.redraw();
+          p.flash("redrawing — glitch report saved");
+        }}>🔄 Redraw</button>
+      </div>
       {p.touch && writes && (
         <div className="key-grid">
           <button {...noBlur} className={`kb wide ${p.pinned ? "on" : ""}`}
