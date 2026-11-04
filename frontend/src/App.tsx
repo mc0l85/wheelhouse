@@ -53,7 +53,7 @@ export default function App() {
     void pasteImage(img, (t) => apiRef.current?.paste(t), flash);
   }, [flash]);   // apiRef is read at call time (declared just below)
   const { hostRef, apiRef } = useHerdrTerminal(session, interactive, true,
-    (n) => flash(`copied ${n} chars ✓`), onConn, onPasteImage);
+    (n) => flash(`copied ${n} chars ✓`), onConn, onPasteImage, flash);
 
   // A sticky modifier lives in the terminal effect; a new session resets it.
   useEffect(() => { setMods({ ctrl: false, alt: false }); }, [session]);

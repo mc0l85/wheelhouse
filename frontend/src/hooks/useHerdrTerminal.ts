@@ -103,7 +103,10 @@ export function useHerdrTerminal(
   onCopied?: (chars: number) => void,
   onConn?: (s: ConnState) => void,
   onPasteImage?: (img: Blob) => void,
+  onNote?: (msg: string, bad?: boolean) => void,
 ) {
+  const noteRef = useRef(onNote);
+  noteRef.current = onNote;
   const hostRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<TermApi | null>(null);
   const copiedRef = useRef(onCopied);
@@ -207,40 +210,47 @@ export function useHerdrTerminal(
     // A clipboard image never reaches xterm (it would paste nothing): capture
     // the paste before xterm's textarea sees it and hand the image up.
     //  • Ctrl+V is let through as a native paste (see the key handler): an image
-    //    is uploaded, anything else goes to the PTY as ^V like before, so Claude
-    //    Code's own Ctrl+V and a shell's quoted-insert keep working.
+    //    is uploaded, text is pasted, and an empty clipboard sends ^V (a shell's
+    //    quoted-insert). Text used to send ^V too, so copied text never arrived:
+    //    Claude Code's own Ctrl+V reads the SERVER's clipboard, which has none.
     //  • Chromium's Ctrl+Shift+V is "paste as plain text": an image-only
     //    clipboard arrives EMPTY, and a screenshot tool's (KDE Spectacle) arrives
     //    as just its file URL. Either way, ask the async Clipboard API for the
     //    image; the text is pasted if there is none.
     let ctrlV = 0;                     // timer: a Ctrl+V paste is expected
-    const ctrlVDone = (sendCtrlV: boolean) => {
-      if (!ctrlV) return;
+    const ctrlVDone = () => {
+      const was = !!ctrlV;
       clearTimeout(ctrlV); ctrlV = 0;
-      if (sendCtrlV) raw("\x16");
+      return was;
     };
+    const empty = () => noteRef.current?.("clipboard is empty — nothing pasted", true);
     const onPaste = (e: ClipboardEvent) => {
       const up = interactiveRef.current ? pasteImgRef.current : undefined;
       const img = up ? clipboardImage(e.clipboardData) : null;
+      const wasCtrlV = ctrlVDone();
       if (img && up) {
-        ctrlVDone(false);
         e.preventDefault(); e.stopPropagation();
         up(img);
         return;
       }
-      if (ctrlV) {
-        ctrlVDone(true);
-        e.preventDefault(); e.stopPropagation();
-        return;
-      }
       const dt = e.clipboardData;
       const plain = dt?.getData("text/plain") ?? "";
-      if (up && dt && navigator.clipboard?.read && (!dt.types.length || IMAGE_FILE_RE.test(plain.trim()))) {
+      if (wasCtrlV) {
+        // Ctrl+V's native paste carries any image, so none here means none on
+        // the clipboard: text is pasted like Ctrl+Shift+V; only an empty
+        // clipboard still sends a raw ^V (shell quoted-insert).
+        e.preventDefault(); e.stopPropagation();
+        if (plain) term.paste(plain); else raw("\x16");
+        return;
+      }
+      if (up && navigator.clipboard?.read && (!plain.trim() || IMAGE_FILE_RE.test(plain.trim()))) {
         e.preventDefault(); e.stopPropagation();
         void readClipboard().then(({ image, text }) => {
-          if (image) up(image); else if (text || plain) term.paste(text || plain);
-        }).catch(() => { if (plain) term.paste(plain); });   // permission refused
+          if (image) up(image); else if (text || plain) term.paste(text || plain); else empty();
+        }).catch(() => { if (plain) term.paste(plain); else empty(); });   // permission refused
+        return;
       }
+      if (!plain) empty();   // xterm pastes only text/plain: say so instead of nothing
     };
     host.addEventListener("paste", onPaste, true);
 
