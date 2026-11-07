@@ -59,6 +59,7 @@ def _spawn(session: str, rows: int, cols: int) -> tuple[int, int]:
 
 _RING = 256 * 1024     # bytes of output kept per client for a glitch report
 _GLITCH_KEEP = 20
+_IN_CAP = 8 * 1024 * 1024  # input queued for the pty, max; a bigger frame is refused whole
 
 
 def _save_glitch(server: bytes, client_b64: str) -> None:
@@ -164,11 +165,38 @@ async def terminal(ws: WebSocket) -> None:
             except Exception:
                 break
 
+    # Input is queued and drained as the pty accepts it. A raw pty takes only
+    # ~11.5 KB per non-blocking write; the old code ignored os.write's count, so
+    # a paste past that lost its tail, INCLUDING the bracketed-paste end marker
+    # (ESC[201~), and herdr sat in paste mode swallowing every key until reload.
+    pending = bytearray()
+    writer_on = False
+
+    def _flush() -> None:
+        nonlocal writer_on
+        while pending:
+            try:
+                n = os.write(fd, pending)
+            except BlockingIOError:
+                break
+            except OSError:          # client gone: the read side ends the socket
+                pending.clear()
+                break
+            del pending[:n]
+        if pending and not writer_on:
+            loop.add_writer(fd, _flush)
+            writer_on = True
+        elif not pending and writer_on:
+            loop.remove_writer(fd)
+            writer_on = False
+
     def _write(data: bytes) -> None:
-        try:
-            os.write(fd, data)
-        except BlockingIOError:   # pty input buffer full: drop rather than stall
-            pass
+        # A paste arrives as ONE frame, so refusing a whole frame past the cap
+        # never splits a bracketed paste.
+        if len(pending) + len(data) > _IN_CAP:
+            return
+        pending.extend(data)
+        _flush()
 
     out = asyncio.create_task(pump_out())
     try:
@@ -218,6 +246,7 @@ async def terminal(ws: WebSocket) -> None:
         _live -= 1
         out.cancel()
         loop.remove_reader(fd)
+        loop.remove_writer(fd)
         try:
             os.close(fd)
         except OSError:
