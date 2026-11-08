@@ -237,3 +237,9 @@ html, body { position: fixed; inset: 0; overscroll-behavior: none; }
    renderer does. [style^="color:"] skips background-only inline styles. */
 .xterm .xterm-rows span.xterm-dim[style^="color:"],
 .xterm .xterm-rows span.xterm-dim[style*=";color:"] { opacity: 0.5 !important; }
+
+/* A soft-keyboard composition is sent to the pane live (useHerdrTerminal), so
+   the pane echoes it; xterm's overlay would only cover the real text. */
+/* Not display:none: with it hidden, Chromium ended the composition after the
+   first letter (seen in a Playwright IME test). Transparent keeps its size. */
+.xterm .composition-view { color: transparent !important; background: transparent !important; }

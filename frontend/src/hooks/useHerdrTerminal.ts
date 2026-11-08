@@ -178,7 +178,44 @@ export function useHerdrTerminal(
     };
     // Apply sticky modifiers (lock semantics — cleared by tapping the key again)
     // to soft/physical typed chars, then send.
+    // Soft keyboards (iOS predictive text, Android Gboard) type a word as an IME
+    // composition, and xterm sends nothing until the word commits. Until then
+    // the pane never sees the keys: a Claude Code suggestion stays on screen and
+    // xterm's composition overlay is drawn on top of it ("h" over "run it…" =
+    // "hun it…"). So the composition is sent live, as backspaces plus the new
+    // tail of the word, and xterm's own send at commit is replaced by the last
+    // correction. The overlay is hidden in wheel.css: the pane echoes for real.
+    let comp: string | null = null;   // composed text the pane already has
+    let compFinal = "";               // what the composition committed as
+    let compTimer = 0;                // waiting for xterm's commit-time onData
+    const sendDiff = (from: string, to: string) => {
+      const a = Array.from(from), b = Array.from(to);
+      let i = 0;
+      while (i < a.length && i < b.length && a[i] === b[i]) i++;
+      const out = "\x7f".repeat(a.length - i) + b.slice(i).join("");
+      if (out) raw(out);
+    };
+    const finishComp = (to: string) => {
+      clearTimeout(compTimer); compTimer = 0;
+      if (comp !== null) sendDiff(comp, to);
+      comp = null;
+    };
+    const onCompStart = () => { if (compTimer) finishComp(compFinal); comp = ""; };
+    const onCompUpdate = (e: CompositionEvent) => {
+      if (comp === null) comp = "";
+      sendDiff(comp, e.data ?? "");
+      comp = e.data ?? "";
+    };
+    const onCompEnd = (e: CompositionEvent) => {
+      compFinal = e.data ?? comp ?? "";
+      clearTimeout(compTimer);
+      compTimer = window.setTimeout(() => finishComp(compFinal), 150);
+    };
     const onKeystroke = (d: string) => {
+      if (compTimer) {
+        if (d === compFinal) { finishComp(d); return; }   // xterm's commit: already sent
+        finishComp(compFinal);
+      }
       let out = d;
       if (armed.ctrl && d.length === 1) out = ctrlOf(d);
       if (armed.alt) out = "\x1b" + out;
@@ -374,6 +411,9 @@ export function useHerdrTerminal(
     }
 
     const dataSub = term.onData(onKeystroke);
+    ta?.addEventListener("compositionstart", onCompStart);
+    ta?.addEventListener("compositionupdate", onCompUpdate);
+    ta?.addEventListener("compositionend", onCompEnd);
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== "keydown") return true;
       const cmd = e.metaKey, ctrl = e.ctrlKey, shift = e.shiftKey;
@@ -511,6 +551,10 @@ export function useHerdrTerminal(
       host.removeEventListener("touchstart", onTouchStart);
       host.removeEventListener("touchmove", onTouchMove);
       dataSub.dispose();
+      clearTimeout(compTimer);
+      ta?.removeEventListener("compositionstart", onCompStart);
+      ta?.removeEventListener("compositionupdate", onCompUpdate);
+      ta?.removeEventListener("compositionend", onCompEnd);
       oscSub.dispose();
       host.removeEventListener("mouseup", onMouseUp);
       host.removeEventListener("paste", onPaste, true);
