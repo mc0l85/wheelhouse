@@ -17,6 +17,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { clipboardImage, readClipboard } from "../paste";
+import { restyleGhost, resetGhost } from "../dim";
 
 // Clipboard write that survives non-gesture / insecure-context callers: async
 // Clipboard API first, then a synchronous hidden-textarea execCommand fallback.
@@ -346,11 +347,12 @@ export function useHerdrTerminal(
         const bytes = new Uint8Array(ev.data);
         ring.push(bytes); ringLen += bytes.length;
         while (ringLen - ring[0].length > RING) ringLen -= ring.shift()!.length;
-        const s = dec.decode(bytes, { stream: true });
+        const s = restyleGhost(dec.decode(bytes, { stream: true }));
         term.write(mouseToHerdr ? s : s.replace(MOUSE_RE, ""));
       };
       sock.onopen = () => {
         ring = []; ringLen = 0;
+        resetGhost();
         if (everOpened) { dec = new TextDecoder(); connRef.current?.("restored"); }
         everOpened = true;
         retry = 0;
