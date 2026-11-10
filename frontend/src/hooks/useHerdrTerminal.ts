@@ -369,6 +369,17 @@ export function useHerdrTerminal(
       try { fit.fit(); } catch { /* ignore */ }
       lastDims = `${term.rows}x${term.cols}`;
       connRef.current?.(everOpened ? "reconnecting" : "connecting");
+      // Exactly one socket per terminal. The first connect runs from
+      // requestAnimationFrame, which a background tab holds back, while
+      // pageshow/online can schedule another; any older socket left open is a
+      // second herdr client whose diffs interleave with this one's in the same
+      // xterm (ghost text that never clears, SGR tails like "5;49m" as text).
+      clearTimeout(retryTimer);
+      if (ws) {
+        const old = ws;
+        old.onmessage = null; old.onopen = null; old.onclose = null;
+        try { old.close(); } catch { /* already gone */ }
+      }
       const sock = new WebSocket(
         `${proto}://${location.host}/api/ws/terminal` +
         `?rows=${term.rows}&cols=${term.cols}`,
@@ -376,6 +387,7 @@ export function useHerdrTerminal(
       ws = sock;
       sock.binaryType = "arraybuffer";
       sock.onmessage = (ev) => {
+        if (ws !== sock) return;                     // superseded socket
         if (typeof ev.data === "string") {          // server text frames are control only
           if (ev.data.includes('"pong"')) clearTimeout(pongDeadline);
           return;
@@ -388,6 +400,7 @@ export function useHerdrTerminal(
         term.write(mouseToHerdr ? s : s.replace(MOUSE_RE, ""));
       };
       sock.onopen = () => {
+        if (ws !== sock) return;
         ring = []; ringLen = 0;
         resetGhost();
         if (everOpened) { dec = new TextDecoder(); connRef.current?.("restored"); }
