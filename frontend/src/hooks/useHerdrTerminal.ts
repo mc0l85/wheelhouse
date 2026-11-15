@@ -15,7 +15,7 @@ import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { CanvasAddon } from "@xterm/addon-canvas";
-import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WrappedLinkProvider } from "../wrapLinks";
 import { clipboardImage, readClipboard } from "../paste";
 import { restyleGhost, resetGhost } from "../dim";
 import type { ConnInfo, ModState, TermApi } from "../types/term";
@@ -129,7 +129,8 @@ export function useHerdrTerminal(
     const fit = new FitAddon();
     term.loadAddon(fit);
     // Bare http(s) URLs in pane text: underline on hover, click opens a new tab.
-    term.loadAddon(new WebLinksAddon((_e, uri) => openLink(uri)));
+    // Joins URLs herdr wrapped across rows (WebLinksAddon saw only the first row).
+    const linkProvider = term.registerLinkProvider(new WrappedLinkProvider(term, openLink));
     term.open(host);
     // Chrome's own inline writing suggestions / autofill would land in xterm's
     // hidden textarea and show through its composition view as solid text over
@@ -533,6 +534,7 @@ export function useHerdrTerminal(
       host.removeEventListener("mouseup", onMouseUp);
       host.removeEventListener("paste", onPaste, true);
       socket.dispose();
+      linkProvider.dispose();
       term.dispose();
       apiRef.current = null;
     };
