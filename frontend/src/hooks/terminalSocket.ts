@@ -33,7 +33,10 @@ export interface TerminalSocket {
   isOpen: () => boolean;
   /** The socket object currently in use (identity checks only). */
   current: () => WebSocket | null;
-  reconnectNow: () => void;
+  /** Reconnect now. With `minConnectingMs`, a handshake still in progress is
+   *  replaced only once it has been pending that long (focus/visibility wakes
+   *  must not kill a slow but healthy handshake). */
+  reconnectNow: (minConnectingMs?: number) => void;
   /** Drop the current socket and reconnect; optionally restart the backoff. */
   abandon: (resetBackoff?: boolean) => void;
   dispose: () => void;
@@ -45,6 +48,7 @@ const ESTABLISHED_MS = 5000;
 
 export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocket {
   let ws: WebSocket | null = null;
+  let connectStartedAt = 0;
   let disposed = false;
   let retry = 0;
   let retryTimer = 0;
@@ -82,11 +86,12 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
     opts.onConn(message ? { state: "reconnecting", message } : { state: "reconnecting" });
     retryTimer = window.setTimeout(connect, d);
   };
-  const reconnectNow = () => {
+  const reconnectNow = (minConnectingMs = 0) => {
     if (disposed) return;
     if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
       retry = 0; scheduleReconnect(0);
     } else if (ws.readyState === WebSocket.CONNECTING) {
+      if (minConnectingMs > 0 && Date.now() - connectStartedAt < minConnectingMs) return;
       // A handshake that may be stuck: replace it now rather than wait for it.
       const pending = ws;
       ws = null;
@@ -115,6 +120,7 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
       try { old.close(); } catch { /* already gone */ }
     }
     const sock = new WebSocket(opts.url());
+    connectStartedAt = Date.now();
     ws = sock;
     sock.binaryType = "arraybuffer";
     let opened = false;          // reached OPEN

@@ -413,7 +413,9 @@ export function useHerdrTerminal(
       },
       onLost: () => term.reset(),
     });
-    const reconnectNow = () => socket.reconnectNow();
+    // Wake events (focus, visibility, pageshow, online) only replace a handshake
+    // that has been pending for 2 s; a slow but healthy one is left to finish.
+    const reconnectNow = () => socket.reconnectNow(2000);
 
     const onVisible = () => {
       if (document.hidden) return;
