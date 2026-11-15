@@ -63,9 +63,9 @@
       "timeout": 300,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:44:23-06:00",
+        "at": "2026-11-15T16:21:53-06:00",
         "rc": 1,
-        "head": "15f23d7"
+        "head": "ab68095"
       }
     },
     {
@@ -148,9 +148,9 @@
       "timeout": 400,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:44:30-06:00",
+        "at": "2026-11-15T16:21:55-06:00",
         "rc": 1,
-        "head": "15f23d7"
+        "head": "ab68095"
       }
     },
     {
@@ -230,11 +230,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:48-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:23-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b1.py",
+        "tail": "...                                                                      [100%]\n3 passed in 8.82s\n"
       }
     },
     {
@@ -258,11 +265,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:55-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:29-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b2.py",
+        "tail": "...                                                                      [100%]\n3 passed in 5.97s\n"
       }
     },
     {
@@ -285,11 +299,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:57-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:31-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b3.py",
+        "tail": ".....                                                                    [100%]\n=============================== warnings summary ===============================\n.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /tempfs/hw-lane-b/backend/.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n5 passed, 1 warning in 0.80s\n"
       }
     },
     {
@@ -312,11 +333,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:57-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:32-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b4.py",
+        "tail": "...                                                                      [100%]\n3 passed in 0.03s\n"
       }
     },
     {
@@ -339,11 +367,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:58-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:32-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b5.py",
+        "tail": "...............                                                          [100%]\n15 passed in 0.04s\n"
       }
     },
     {
@@ -379,11 +414,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:45:00-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:34-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b7.py",
+        "tail": ".........                                                                [100%]\n9 passed in 0.98s\n"
       }
     },
     {
@@ -400,18 +442,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:37:28-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:14:26-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c1.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c1.test.ts (9 tests) 12ms\n\n Test Files  1 passed (1)\n      Tests  9 passed (9)\n   Start at  16:14:24\n   Duration  1.89s (transform 72ms, setup 0ms, collect 57ms, tests 12ms, environment 663ms, prepare 138ms)\n\n"
       }
     },
     {
@@ -430,18 +465,11 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 1500,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:37:50-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:14:49-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "frontend/e2e/check_items.sh C-2",
-        "tail": "latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-kupwpnQX.js                                   579.30 kB \u2502 gzip: 160.33 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.90s\nbuilt acc-hw-lane-c -> /tmp/hw-acc-dist.0tRIYj\n  .. paste-native ok\n  .. paste-ctrlv ok\n  .. paste-keyboard ok\n  .. paste-controls ok\n  .. paste-image ok\n  .. osc52-cap ok\n"
       }
     },
     {
@@ -458,18 +486,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:37:53-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:14:52-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c3.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c3.test.ts (12 tests) 17ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  16:14:50\n   Duration  1.61s (transform 122ms, setup 0ms, collect 116ms, tests 17ms, environment 728ms, prepare 121ms)\n\n"
       }
     },
     {
@@ -486,18 +507,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:37:57-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:14:56-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c4.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c4.test.ts (10 tests) 14ms\n\n Test Files  1 passed (1)\n      Tests  10 passed (10)\n   Start at  16:14:54\n   Duration  1.81s (transform 113ms, setup 0ms, collect 83ms, tests 14ms, environment 1.01s, prepare 167ms)\n\n"
       }
     },
     {
@@ -515,18 +529,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:02-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:14:59-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c5.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c5.test.ts (7 tests) 78ms\n\n Test Files  1 passed (1)\n      Tests  7 passed (7)\n   Start at  16:14:57\n   Duration  1.94s (transform 254ms, setup 0ms, collect 257ms, tests 78ms, environment 1.02s, prepare 177ms)\n\n"
       }
     },
     {
@@ -544,18 +551,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:04-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:03-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c6.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c6.test.ts (5 tests) 31ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  16:15:01\n   Duration  1.71s (transform 205ms, setup 0ms, collect 164ms, tests 31ms, environment 934ms, prepare 220ms)\n\n"
       }
     },
     {
@@ -573,18 +573,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:08-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:08-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c7.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c7.test.ts (4 tests) 28ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  16:15:05\n   Duration  2.46s (transform 146ms, setup 0ms, collect 123ms, tests 28ms, environment 1.10s, prepare 252ms)\n\n"
       }
     },
     {
@@ -602,18 +595,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:12-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:11-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c8.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c8.test.ts (3 tests) 28ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:15:09\n   Duration  2.23s (transform 163ms, setup 0ms, collect 124ms, tests 28ms, environment 818ms, prepare 244ms)\n\n"
       }
     },
     {
@@ -631,18 +617,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:15-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:16-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c9.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c9.test.ts (2 tests) 26ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:15:14\n   Duration  2.54s (transform 245ms, setup 0ms, collect 128ms, tests 26ms, environment 1.17s, prepare 352ms)\n\n"
       }
     },
     {
@@ -660,18 +639,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:17-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:20-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c10.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c10.test.ts (3 tests) 37ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:15:17\n   Duration  1.98s (transform 168ms, setup 0ms, collect 164ms, tests 37ms, environment 1.10s, prepare 183ms)\n\n"
       }
     },
     {
@@ -689,18 +661,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:38:21-06:00",
+        "at": "2026-11-15T16:28:32-06:00",
         "rc": 1,
-        "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:22-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c11.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c11.test.ts (3 tests) 10ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:15:21\n   Duration  1.49s (transform 129ms, setup 0ms, collect 114ms, tests 10ms, environment 783ms, prepare 162ms)\n\n"
+        "head": "adcb035"
       }
     },
     {
@@ -718,18 +683,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:42:04-06:00",
         "rc": 1,
         "head": "600a157"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:27-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c12.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c12.test.ts (4 tests) 41ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  16:15:24\n   Duration  2.17s (transform 188ms, setup 0ms, collect 178ms, tests 41ms, environment 875ms, prepare 212ms)\n\n"
       }
     },
     {
@@ -747,18 +705,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:29-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:29-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c13.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c13.test.ts (6 tests) 30ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:15:28\n   Duration  1.43s (transform 156ms, setup 0ms, collect 129ms, tests 30ms, environment 744ms, prepare 151ms)\n\n"
       }
     },
     {
@@ -776,18 +727,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:38:32-06:00",
         "rc": 1,
         "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:15:33-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c14.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c14.test.ts (6 tests) 31ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:15:31\n   Duration  1.73s (transform 135ms, setup 0ms, collect 127ms, tests 31ms, environment 930ms, prepare 204ms)\n\n"
       }
     },
     {
@@ -806,18 +750,34 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 1500,
-      "status": "done",
+      "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:39:21-06:00",
+        "at": "2026-11-15T16:29:22-06:00",
         "rc": 1,
-        "head": "144bb9f"
-      },
-      "evidence": {
-        "at": "2026-11-15T16:16:21-06:00",
-        "rc": 0,
-        "head": "585355c",
-        "check": "frontend/e2e/check_items.sh C-15",
-        "tail": "ormal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-kupwpnQX.js                                   579.30 kB \u2502 gzip: 160.33 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.91s\nbuilt acc-hw-lane-c -> /tmp/hw-acc-dist.ogaN8Q\n  .. dictation-insertText ok\n  .. dictation-composition ok\n  .. dictation-rewrite-insertText ok\n  .. dictation-rewrite-composition ok\n  .. predictive ok\n  .. hardware ok\n  .. paste-breakout ok\n  .. ctrl-composition ok\n  .. ctrl-key ok\n  .. tray-clear ok\n  .. reset-mid-composition ok\n"
+        "head": "adcb035"
+      }
+    },
+    {
+      "id": "C-16",
+      "title": "e2e exact bytes, real keys: hardware Enter mid-composition \u2192 hel\\r then \\r; dictation \"ok\" + typed \"ok\" \u2192 okok; autocorrect collapsed caret teh\u2192the \u2192 7f 7f he",
+      "phase": "P1",
+      "lane": "C",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_items.sh C-16",
+      "files": [
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/check_items.sh",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1500,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T16:29:42-06:00",
+        "rc": 1,
+        "head": "adcb035"
       }
     },
     {
@@ -956,13 +916,13 @@
   ],
   "lock": {
     "backend/tests/acceptance/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "backend/tests/acceptance/conftest.py": "cec89334cf1d8f88a7d7a278e84d755699924b42633f01b4a3b8c542e3fc6e15",
+    "backend/tests/acceptance/conftest.py": "52e85172c5c987382e338ba48da5188d7040755c4e2466e77c17b5d6c37a3408",
     "backend/tests/acceptance/pushkit.py": "ae3fe883332d234a8b783afaef9a16d97452206a38ec3421cfc4a7106244cf33",
     "backend/tests/acceptance/test_a1.py": "15b4e13884196ca5adaca545ccc88e8627d81f487d2463a635a6a78e49056ab3",
-    "backend/tests/acceptance/test_a2.py": "fc6a1711bc3d648d4ffd062ae9c6d9e40bae47341e1d054ac7fe16e0c10aa1d7",
+    "backend/tests/acceptance/test_a2.py": "7d53d3135ec5e85affecc034d40ab68716d87af3cbc1f4481689cad60c0bd343",
     "backend/tests/acceptance/test_a3.py": "956b72c14a1ff4ec865e17fefce38f6ded58133aaca1a6053a779f97b4852883",
     "backend/tests/acceptance/test_a4.py": "ba247b8c5d27bb4fff2fc873b4bcba6576c607c51c456daddaa741da4c639f72",
-    "backend/tests/acceptance/test_a5.py": "721afd703c52d7599337005c206e10e19f6d06a89c2964ccea33e80d489e900a",
+    "backend/tests/acceptance/test_a5.py": "ca9b99e55cd99a178012548a967a21a9c415f7642f38e8ebf70f7856a3ebb8c2",
     "backend/tests/acceptance/test_a6.py": "edcdfd37bb7ea1bd1cab773b2ba9d08e6eecb394658a59eea3b4a4749d9bb053",
     "backend/tests/acceptance/test_a7.py": "c6568aee8934718c3d8d7a75d740c489d714ea363b1359b80349d7355e2d78ab",
     "backend/tests/acceptance/test_b1.py": "5c486c08b323807959b263be0f70e63c0a27e2d179c6dfffdc8f313636ba96a9",
@@ -976,18 +936,18 @@
     "backend/tests/fakes/fake_herdr_api.py": "c3536da989dae978d1390e5ff2db0f28952d978bbd554732ff68de4413166de8",
     "backend/tests/fakes/herdr_echo.py": "113758c85797e10274356d018694a821a5083dec0aa51095aef29d7d7be130dd",
     "backend/tests/fakes/herdr_exit.py": "0f1b4fcb3f5b4c9c4a512cbc9957d95b43b0581feca2fbdd64153eb48eff42a9",
-    "backend/tests/fakes/herdr_flood.py": "f7a459ec4e454530a3875ad7e259af4fe5912f3935426e2af8d3cac940b6aa5c",
+    "backend/tests/fakes/herdr_flood.py": "c5f4c6f0e6c2143e000942a0f8a0df6d049ae80715c577ecfbb4611be2d12089",
     "backend/tests/fakes/herdr_marker.py": "883ed8f04e088d78dca5d140c058f7b013b57c94efb0fc28d6a916acfedd17f1",
     "backend/tests/fakes/herdr_record.py": "435648e21bb7c79201c3011ac048de157eb17fcd043fa25853d7f328d21ada9e",
     "backend/tests/make_test_venv.sh": "dd4c914eaa2cf4051a5cfc5184c560478441ec3e7469791a5c36dda79e044f61",
     "backend/tests/requirements-test.txt": "b006188eec3f998cf7157fbdc2a7704c06af9ce7f80929f2ed843df9e3465c36",
-    "frontend/e2e/acceptance_e2e.py": "5ac24ebbbfb2383add9b2ea41774592f2cc80fa05040b7390efc47f71542e3f3",
+    "frontend/e2e/acceptance_e2e.py": "e0b23956d94f09473ba149a0287014ede4766ddbec5e3c96c5f2b38c350f4e0c",
     "frontend/e2e/build_remote.sh": "571038def16b416dca18e7c3ddeba17ec5169ea133b6f53e7b2cc165652c577f",
     "frontend/e2e/check_items.sh": "78574112969dea0c12f6583fbee0685e1f03eb9cf044a8a52fff59c0dd6908a4",
     "frontend/e2e/run_e2e.py": "53fb89058dec647826462f9b6aa39fb1df53e9167f3aef8178d72a6e2fb1a8f0",
     "frontend/test/acceptance/c1.test.ts": "d8025107e2e3007f63ec03cd70b0bfa9044625c1eedb08c00062bd1e214a151e",
     "frontend/test/acceptance/c10.test.ts": "666a1e4cd85a9c5bc792d08a4ba0d8ee2dbef9eccdd081922f54c0b84564004b",
-    "frontend/test/acceptance/c11.test.ts": "85df190cb1036b22813819568d587822eb709f629744f8e3711d43344f1e3104",
+    "frontend/test/acceptance/c11.test.ts": "a33f7045555df31ac60da2f965b76e80a667474d5826601d22049aec4976561a",
     "frontend/test/acceptance/c12.test.ts": "c59551e19a2b719acde631b59be14cd8ea204d23eb2fdf160f82f1c0c5e63f0b",
     "frontend/test/acceptance/c13.test.ts": "c448d4833c9d98cd09649445a5e685ba3f35c3d6ffcfe5d6808f5a135ab7f87f",
     "frontend/test/acceptance/c14.test.ts": "23e9b5f99f91b0d546d6685b0793596469fd0e3ea7101a882046091c4158b6e2",
@@ -1008,5 +968,5 @@
     "frontend/test/acceptance/helpers/mic.ts": "e1d6977b6ec28eaf4fc36f7e4714820bc6977fbeb30cbf4672943da77f40ed4a",
     "frontend/vitest.config.ts": "0f8e27f84bcbad6fa87a5d452533498974f1623b8d92e6e6bc329370e9904034"
   },
-  "locked_at": "2026-11-15T15:36:35-06:00"
+  "locked_at": "2026-11-15T16:27:20-06:00"
 }

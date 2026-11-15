@@ -9,7 +9,9 @@ import os
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.datastructures import Headers
+from starlette.responses import PlainTextResponse
+from starlette.types import Receive, Scope, Send
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -22,14 +24,58 @@ from .routers import debug, events, panes, push, structure, terminal, upload
 
 
 app = FastAPI(title="herdr-web", version="0.1.0",
-              description="A browser wrapper over a herdr terminal workspace server.")
+              description="A browser wrapper over a herdr terminal workspace server.",
+              docs_url=None, redoc_url=None, openapi_url=None)
 
 if settings.cors_origins:
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins,
                        allow_methods=["*"], allow_headers=["*"])
 # DNS-rebinding guard: a hostile page re-pointing its own name at this address
 # would pass a same-origin check, but not a Host allowlist. Covers WebSockets too.
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+def host_only(value: str) -> str:
+    """Hostname from a Host header, lowercased: `name`, `name:port`, `[v6]`, `[v6]:port`.
+    Starlette's own parsing splits on the first ':' and mangles bracketed IPv6.
+    A malformed bracket form returns "" and so matches nothing. Allowlist entries
+    are compared without a port: `example.com` allows `example.com:8443` too."""
+    v = value.strip().lower()
+    if v.startswith("["):
+        end = v.find("]")
+        if end == -1:
+            return ""
+        rest = v[end + 1:]
+        if rest == "" or (rest[0] == ":" and rest[1:].isdigit()):
+            return v[1:end]
+        return ""
+    return v.split(":")[0]
+
+
+class HostGuard:
+    """DNS-rebinding guard (Host allowlist) for HTTP and WebSocket. Entries may be
+    names, IPs, bracketed IPv6, `*.suffix` wildcards, or `*` for any."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+        hosts = [h.strip().lower() for h in settings.allowed_hosts]
+        hosts = [h[1:-1] if h.startswith("[") and h.endswith("]") else h for h in hosts]
+        self.any_host = "*" in hosts
+        self.exact = set(hosts)
+        self.suffixes = tuple(h[1:] for h in hosts if h.startswith("*."))
+
+    def ok(self, host: str) -> bool:
+        return host in self.exact or (bool(host) and host.endswith(self.suffixes) if self.suffixes else False)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket") or self.any_host:
+            return await self.app(scope, receive, send)
+        if self.ok(host_only(Headers(scope=scope).get("host", ""))):
+            return await self.app(scope, receive, send)
+        if scope["type"] == "websocket":
+            await send({"type": "websocket.close", "code": 1008})
+            return
+        await PlainTextResponse("Invalid host header", status_code=400)(scope, receive, send)
+
+
+app.add_middleware(HostGuard)
 
 
 @app.middleware("http")
