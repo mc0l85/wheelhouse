@@ -42,7 +42,7 @@ Then the pure modules (no DOM; clock and timers injected):
 |---|---|
 | `input/sanitize.ts` | `sanitizePaste(text)`: drop ESC, other C0 except `\t \n \r`, DEL, and C1 (U+0080–U+009F). `OSC52_MAX_BYTES` counts decoded bytes. |
 | `input/modifiers.ts` | `ModState` machine: tap → once; tap again within `DOUBLE_TAP_MS` → locked; tap while once/locked (after the window) → off; a tap after "once" was consumed → once. `apply(data, source)` with `source ∈ {key, composition, tray, paste, report}`: Ctrl applies to one printable char from key/composition/tray (table: a–z, space, `@ [ \ ] ^ _ ?`; unmapped char → sent unmodified, modifier still consumed); Alt applies to one printable char or `\r \t \x7f`; paste/report never modified and never consume. Emits a state-change callback so the UI indicator updates when "once" is consumed. |
-| `input/composer.ts` | `reduce(state, event) → { state, send: string, effects: Effect[] }`. Events carry `now` and textarea snapshots `{ value, selStart, selEnd }`: `compositionstart/update/end`, `beforeinput(inputType, data)`, `input(inputType)`, `onData(d, origin)` with `origin ∈ {commit, keydownFinalize, textareaChange, other}` (xterm 5.5.0's three onData sources), `timeout(id)`, `sendFailed`, `reset`. Effects: `setTimer(id, ms)`, `cancelTimer(id)`, `clearTextarea`, `consumeModifier(m)` (a "once" modifier was applied to a composition's first letter). Takes the modifier state so a composing keyboard's first letter can be modified. Backspace unit: grapheme clusters via `Intl.Segmenter` (Decision 9). **Prefix-minimal edits:** replacing text the pane already has (a composition update, a selected-tail `insertText` / `insertReplacementText`) sends one DEL per grapheme after the common grapheme prefix, then the new suffix ("teh"→"the" = `7f 7f he`; "hello"→"help" = `7f 7f p`). `DUP_WINDOW_MS` (exported, 1500): xterm's commit `onData` that arrives within this long after `compositionend` and matches the committed text (or its xterm substring) is dropped once; later, an identical `onData` is always sent. |
+| `input/composer.ts` | `reduce(state, event) → { state, send: string, effects: Effect[] }`. Events carry `now` and textarea snapshots `{ value, selStart, selEnd }`: `compositionstart/update/end`, `beforeinput(inputType, data)`, `input(inputType)`, `onData(d, origin)` with `origin ∈ {commit, keydownFinalize, textareaChange, other}` (xterm 5.5.0's three onData sources), `timeout(id)`, `sendFailed`, `reset`. Effects: `setTimer(id, ms)`, `cancelTimer(id)`, `clearTextarea`, `consumeModifier(m)` (a "once" modifier was applied to a composition's first letter). Takes the modifier state so a composing keyboard's first letter can be modified. Backspace unit: grapheme clusters via `Intl.Segmenter` (Decision 9). **Prefix-minimal edits:** replacing text the pane already has (a composition update, a selected-tail `insertText` / `insertReplacementText`) sends one DEL per grapheme after the common grapheme prefix, then the new suffix ("teh"→"the" = `7f 7f he`; "hello"→"help" = `7f 7f p`). A tail `insertReplacementText` with a collapsed caret (an autocorrect tap) is a tail replacement too: `getTargetRanges()` is empty for a textarea in Chromium, so the replaced span comes from the textarea before/after. `DUP_WINDOW_MS` (exported, 1500): xterm's commit `onData` that arrives within this long after `compositionend` and matches the committed text (or its xterm substring) is dropped once; later, an identical `onData` is always sent. **`sendFailed`** (the bytes were not delivered): forget them; the next correction sends the word again with no DEL for undelivered text. **`reset`** (the socket reopened; bytes sent before the drop probably reached the pane): the composition in progress is abandoned — nothing more is sent for it (no update, no end, not xterm's commit `onData` for it) until the next `compositionstart`; this never doubles text and never erases text it may not have delivered. |
 | `components/micSubmit.ts` | the whole post-dictation sequence with injected clock, timer and api: deliver text (unless target is blocked at deliver time), wait `SUBMIT_MS`, re-check, send Enter. Skip Enter (text kept, toast with reason) when: timer fired > 1.5 s late, pane blocked now, pane gone, status fetch failed. |
 | `hooks/socketPolicy.ts` | `onClose(code, reason, everOpened, failStreak)` → `{ retry, delayMs, message? }`, `failStreak` = consecutive closes of sockets that never opened, counting this one (0 when this one opened); 1008, 1013, 4503, 4500 and `failStreak >= NEVER_OPENED_LIMIT` (exported, 3) show a message, which contains the close reason when one was given; `CONNECT_TIMEOUT_MS`. |
 
@@ -155,13 +155,13 @@ by every lane that edits the hook.
 - [ ] **A-5** multi-MB output to a slow consumer: byte-exact in order below OUT_Q_MAX_BYTES; above it close 1013 "output backlog", never silent loss — _fixture-test, sonnet_
 - [ ] **A-6** text {"type":"bogus"} dropped; input works; binary bogus JSON forwarded verbatim; untyped text, resize, ping unchanged — _fixture-test, sonnet_
 - [ ] **A-7** terminal limit → close 1013 with a reason after accept (and foreign Origin → 1008 after accept) — _fixture-test, sonnet_
-- [ ] **B-1** pane blocked at resubscribe with no event → exactly one push (reconcile on every (re)subscribe) — _fixture-test, sonnet_
-- [ ] **B-2** one pending confirm per pane: flicker inside the window → 1 push; blocked→working stays → 0; two episodes → 2 — _fixture-test, sonnet_
-- [ ] **B-3** /docs, /redoc, /openapi.json → 404 — _test, sonnet_
-- [ ] **B-4** requirements.txt = the full exact-pinned freeze of the running venv — _test, sonnet_
-- [ ] **B-5** deploy/herdr.service + herdr-web.service parse as INI with the PRD 4.3 keys; no hard dependency; install.sh installs system units — _test, sonnet_
+- [x] **B-1** pane blocked at resubscribe with no event → exactly one push (reconcile on every (re)subscribe) — _fixture-test, sonnet_
+- [x] **B-2** one pending confirm per pane: flicker inside the window → 1 push; blocked→working stays → 0; two episodes → 2 — _fixture-test, sonnet_
+- [x] **B-3** /docs, /redoc, /openapi.json → 404 — _test, sonnet_
+- [x] **B-4** requirements.txt = the full exact-pinned freeze of the running venv — _test, sonnet_
+- [x] **B-5** deploy/herdr.service + herdr-web.service parse as INI with the PRD 4.3 keys; no hard dependency; install.sh installs system units — _test, sonnet_
 - [ ] **B-6** docs updated: API close codes and frames, deployment notes, no token-gate text (checklist) — _visual, sonnet_
-- [ ] **B-7** bracketed IPv6 loopback Host ([::1], [::1]:port) accepted by the default allowlist; other hosts still 400 — _test, sonnet_
+- [x] **B-7** bracketed IPv6 loopback Host ([::1], [::1]:port) accepted by the default allowlist; other hosts still 400 — _test, sonnet_
 - [ ] **C-1** sanitizePaste drops ESC, C0 (keeps \t\n\r), DEL, C1; bracketed-paste breakout comes out inert — _test, sonnet_
 - [ ] **C-2** every paste path goes through sanitizePaste (native, Ctrl+V, keyboard, Controls › Paste, image); OSC 52 over the cap ignored with a toast — _fixture-test, sonnet_
 - [ ] **C-3** modifier machine once/locked/off transitions with an injected clock; hook uses it — _test, sonnet_
@@ -177,6 +177,7 @@ by every lane that edits the hook.
 - [ ] **C-13** (F9f) backspace counts in grapheme clusters: ZWJ family, flag, e+U+0301 with exact bytes — _test, sonnet_
 - [ ] **C-14** (F9g/h) duplicate-commit guard drops only xterm's pending commit, once; second identical composition is sent — _test, sonnet_
 - [ ] **C-15** e2e: dictation (both modes, extending and rewriting), predictive, hardware, paste breakout, Ctrl on a composition and on a hardware key (indicator clears), tray Enter/^C clear the textarea, socket drop mid-composition sends no 7f after reopen — _fixture-test, sonnet_
+- [ ] **C-16** e2e exact bytes, real keys: hardware Enter mid-composition → hel\r then \r; dictation "ok" + typed "ok" → okok; autocorrect collapsed caret teh→the → 7f 7f he — _fixture-test, sonnet_
 - [ ] **D-1** Mic: Enter timer fired > 1.5 s late → no Enter, text kept, toast; Mic.tsx uses submitDictation — _test, sonnet_
 - [ ] **D-2** Mic: pane blocked now / gone / status failed → no Enter; blocked at deliver time → text not sent — _test, sonnet_
 - [ ] **D-3** 1008/1013/4503/4500 and N never-opened closes → visible message (with the reason), retry with backoff; terminalSocket uses the policy — _test, sonnet_
@@ -240,14 +241,18 @@ by every lane that edits the hook.
 - C-8 (F9a) commit with trailing chars → only the remainder, both before and after the 150 ms timer.
 - C-9 (F9b) start, update "hel", onData("hel", keydownFinalize), onData("\r"), end → exactly `hel\r`.
 - C-10 (F9c) re-composition into an existing word does not retype the word.
-- C-11 (F9d) `send` false → composer resets; next correction emits no backspaces for undelivered text;
-  socket reset resets it.
+- C-11 (F9d) `send` false → composer forgets; next correction resends the word with no backspaces for
+  undelivered text. Socket reset mid-composition → that composition is abandoned (zero further bytes for it,
+  no "helhello", no DEL); the next composition types normally.
 - C-12 (F9e) non-tail replacement: zero bytes for both `insertText` and `insertReplacementText`, then a
   textarea reset.
 - C-13 (F9f) backspace counts per the P0-4 unit, with emoji/ZWJ/flag/combining cases stating exact bytes.
 - C-14 (F9g/h) tray Enter/^C clear the textarea; a second identical commit with its own composition events
   inside the window is sent; only an `onData` with no intervening composition is dropped, once.
 - C-15 e2e: dictation, predictive, hardware, paste-breakout (bracketed), Ctrl-on-composition scenarios.
+- C-16 e2e, exact bytes on the socket with real key events: hardware Enter mid-composition → exactly `hel\r`,
+  a second Enter within 300 ms → `\r` again; dictation commit "ok" then real keys "ok" within 1 s → `okok`
+  (composition and insertText dictation); autocorrect "teh"→"the" with a collapsed caret → `7f 7f he`.
 
 **D (frontend Mic + socket)**
 - D-1 Mic: timer fired > 1.5 s late → no Enter, text kept, toast.

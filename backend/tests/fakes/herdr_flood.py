@@ -3,6 +3,7 @@
 
   FAKE_HERDR_FLOOD_BYTES  bytes to write (default 4 MiB)
   FAKE_HERDR_SECONDS      linger after writing, then exit 0 (default 0)
+  FAKE_HERDR_STARTED      file created just before the first byte is written (optional)
 
 The pty is put in raw mode first (no ONLCR), so the bytes reach the master
 unchanged. Tests import `pattern(n)` from this module to check what arrived.
@@ -38,6 +39,9 @@ def main() -> None:
         pass
     n = int(os.environ.get("FAKE_HERDR_FLOOD_BYTES", str(4 << 20)))
     data = pattern(n)
+    started = os.environ.get("FAKE_HERDR_STARTED")
+    if started:
+        open(started, "w").close()
     view = memoryview(data)
     while view:
         w = os.write(fd, view[:65536])

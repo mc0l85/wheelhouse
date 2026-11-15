@@ -66,10 +66,10 @@ deploy/install.sh
 ```
 
 That builds the app, writes `~/.config/herdr-web/env` (localhost only, read-only)
-and starts a `systemd --user` service. Edit the env file to turn on typing
+and installs two system services (`herdr` and `herdr-web`, using sudo). Edit the env file to turn on typing
 (`HERDRWEB_ENABLE_WRITES=1`), add the host name you'll use from your phone to
 `HERDRWEB_ALLOWED_HOSTS`, or pick a session, then
-`systemctl --user restart herdr-web`. On macOS, or to run it by hand:
+`sudo systemctl restart herdr-web`. On macOS, or to run it by hand:
 
 ```bash
 deploy/install.sh --build
