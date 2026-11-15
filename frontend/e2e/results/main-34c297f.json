@@ -1,0 +1,40 @@
+{
+ "dist": "main",
+ "rev": "34c297f",
+ "scenarios": {
+  "dictation-insertText": {
+   "expected": "take a look at it.",
+   "text": "take a look at it.",
+   "ok": true,
+   "gating": true,
+   "raw_hex": "747f74616b657f7f7f7f74616b6520617f7f7f7f7f7f74616b652061206c6f6f6b7f7f7f7f7f7f7f7f7f7f7f74616b652061206c6f6f6b2061747f7f7f7f7f7f7f7f7f7f7f7f7f7f74616b652061206c6f6f6b2061742069742e",
+   "raw_repr": "'t\\x7ftake\\x7f\\x7f\\x7f\\x7ftake a\\x7f\\x7f\\x7f\\x7f\\x7f\\x7ftake a look\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7ftake a look at\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7f\\x7ftake a look at it.'"
+  },
+  "dictation-composition": {
+   "expected": "take a look at it.",
+   "text": "takeake a a look look at at it. it.",
+   "ok": false,
+   "gating": false,
+   "raw_hex": "74616b65616b6520612061206c6f6f6b206c6f6f6b2061742061742069742e2069742e",
+   "raw_repr": "'takeake a a look look at at it. it.'"
+  },
+  "predictive": {
+   "expected": "hi there ",
+   "text": "hi there ",
+   "ok": true,
+   "gating": true,
+   "raw_hex": "686920746865726520",
+   "raw_repr": "'hi there '"
+  },
+  "hardware": {
+   "expected": "hello world",
+   "text": "hello world",
+   "ok": true,
+   "gating": true,
+   "raw_hex": "68656c6c6f20776f726c64",
+   "raw_repr": "'hello world'"
+  }
+ },
+ "ping_pong_seen": true,
+ "ok": true
+}
