@@ -60,6 +60,8 @@ export interface ComposerState {
   suppress: string | null;
   /** Clear the textarea after the next input event (a replacement we could not map onto the pane). */
   clearOnInput: boolean;
+  /** A socket reset abandoned the composition in progress: send nothing more for it until the next compositionstart. */
+  abandoned: "live" | "ended" | null;
 }
 
 export interface ComposerResult {
@@ -72,7 +74,7 @@ export function initialComposerState(): ComposerState {
   return {
     comp: null, compFinal: "", lastCommit: "", lastCommitAt: 0, replPending: null,
     ctrl: "off", alt: "off", timerArmed: false, expected: "", lastExpected: "", startLen: 0, startVal: null,
-    lead: null, adopt: null, suppress: null, clearOnInput: false,
+    lead: null, adopt: null, suppress: null, clearOnInput: false, abandoned: null,
   };
 }
 
@@ -169,11 +171,12 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
         ...s, comp: tailSel(event.ta), lead: null, adopt: null, suppress: null, replPending: null,
         ctrl: event.mods.ctrl, alt: event.mods.alt, startLen: event.ta.value.length,
         startVal: event.ta.selStart === event.ta.selEnd && event.ta.selEnd === event.ta.value.length ? event.ta.value : null,
-        lastCommit: "", lastExpected: "", expected: "", clearOnInput: false,
+        lastCommit: "", lastExpected: "", expected: "", clearOnInput: false, abandoned: null,
       }, send);
     }
 
     case "compositionupdate": {
+      if (s.abandoned) return done(s);
       let send = "";
       if (s.adopt) { const r = resolveAdopt(s, effects); s = r.state; send = r.send; }
       const data = event.data;
@@ -194,6 +197,7 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
     }
 
     case "compositionend": {
+      if (s.abandoned) return done({ ...s, abandoned: "ended" });
       let send = "";
       if (s.adopt) { const r = resolveAdopt(s, effects); s = r.state; send = r.send; }
       if (s.comp === null) return done(s, send);   // already finalized (keydown) or reset: nothing to settle
@@ -205,7 +209,13 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
     case "beforeinput": {
       if (event.inputType !== "insertText" && event.inputType !== "insertReplacementText") return done(s);
       const t = event.ta;
-      if (t.selStart >= t.selEnd) return done(s);        // nothing selected: nothing to erase
+      if (t.selStart >= t.selEnd) {
+        // Nothing selected. An autocorrect tap with a collapsed caret still replaces text, but
+        // getTargetRanges() is empty for a textarea: settle it from the textarea before/after.
+        if (event.inputType === "insertReplacementText")
+          return done({ ...s, replPending: { before: t.value, s0: t.selStart, e0: t.selEnd } });
+        return done(s);
+      }
       const insertText = event.inputType === "insertText";
       if (s.suppress !== null) effects.push({ type: "cancelTimer", id: SUPPRESS_TIMER });
       s = { ...s, suppress: null };
@@ -237,7 +247,17 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       if (s.replPending && event.inputType === "insertReplacementText") {
         const { before, s0, e0 } = s.replPending;
         const v = event.ta.value;
-        send += diff(before.slice(s0, e0), v.slice(s0, v.length - (before.length - e0)));
+        if (s0 >= e0) {
+          let p = 0;
+          while (p < before.length && p < v.length && before[p] === v[p]) p++;
+          let q = 0;
+          while (q < before.length - p && q < v.length - p && before[before.length - 1 - q] === v[v.length - 1 - q]) q++;
+          if (q === 0) send += diff(before, v);                 // changed text runs to the end: a tail replacement
+          else {
+            effects.push({ type: "toast", msg: "edit not sent: autocorrect changed earlier text" });
+            s = { ...s, clearOnInput: true };
+          }
+        } else send += diff(before.slice(s0, e0), v.slice(s0, v.length - (before.length - e0)));
         s = { ...s, replPending: null };
       }
       if (s.clearOnInput) { effects.push({ type: "clearTextarea" }); s = { ...s, clearOnInput: false }; }
@@ -246,6 +266,10 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
 
     case "onData": {
       const d = event.data;
+      if (s.abandoned && (event.origin === "commit" || event.origin === "keydownFinalize")) {
+        // xterm's flush / commit for the abandoned composition: never sent.
+        return done(event.origin === "commit" ? { ...s, abandoned: null } : s);
+      }
       if (event.origin === "keydownFinalize") {
         if (s.comp === null) return done(s, d);
         // xterm's flush can be empty when it has not yet seen the composed text: never erase the pane for that.
@@ -281,7 +305,10 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
     case "reset": {
       if (s.timerArmed) effects.push({ type: "cancelTimer", id: COMMIT_TIMER });
       if (s.suppress !== null) effects.push({ type: "cancelTimer", id: SUPPRESS_TIMER });
-      return done({ ...initialComposerState(), startLen: s.startLen });
+      // reset: a composition in progress (or just ended, commit pending) is abandoned.
+      const abandoned = event.type === "reset" && (s.comp !== null || s.timerArmed || s.adopt !== null)
+        ? (s.timerArmed ? "ended" : "live") : null;
+      return done({ ...initialComposerState(), startLen: s.startLen, abandoned });
     }
   }
 }
