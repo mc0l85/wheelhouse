@@ -87,13 +87,29 @@ by every lane that edits the hook.
   `KillMode=mixed`, `TimeoutStopSec=15`, `OOMPolicy=continue`, `TasksMax=infinity`.
 - `deploy/herdr-web.service`: system unit; `Wants=`/`After=herdr.service`; **no** `Requires=`, `BindsTo=`,
   `PartOf=` either way. `deploy/install.sh` installs both as system units.
+- **Unit names on an existing host (decided 2026-11-15):** the cutover **migrates to the repo unit names**
+  (`herdr.service`, `herdr-web.service`) rather than keeping a host's legacy web unit name. The host's values
+  (service user, home, herdr binary, app dir, env dir, unit dir, the legacy unit's name, state dir, the
+  nightly script's path, the host name) live in a **host-values file kept outside the repo**
+  (`--host-env`); the cutover renders the repo templates with them exactly as `install.sh` does
+  (`@APP_DIR@ @CONF_DIR@ @HERDR_BIN@ @SERVICE_USER@ @SERVICE_GROUP@ @SERVICE_UID@ @SERVICE_HOME@`). The legacy
+  web unit is disabled and its unit file moved into the run's state dir **in the same step that starts the
+  new web unit**; rollback puts it back, re-enables and starts it. `install.sh` is never run on a deployed
+  host (its layout differs). The web env file (`CONF_DIR/env`) must carry every setting the legacy unit set
+  inline (`HERDRWEB_HOST`, `HERDRWEB_PORT`, `HERDR_BIN`, `HERDR_SESSION`) plus the legacy env file's
+  contents; preflight checks the keys exist (never their values).
 - Nightly update: the host's `herdr update --handoff` timer is either proven to survive under the unit (P0-1)
   or switched to plain `herdr update` (the running server keeps going; the next server start picks up the
   new binary).
 - Native resume: herdr 0.9.x restores layout and resumes agents itself on server start
   (`[session] resume_agents_on_restore`). The cutover relies on it and only relaunches where it did not.
-- `deploy/cutover.sh` — runs detached (`systemd-run --unit=herdr-cutover`, its own cgroup); herdr CLI as the
-  service user with HOME set, root only for systemd steps. Steps before 4 abort with nothing changed:
+- `deploy/cutover.sh --host-env FILE [--dry-run] [--force] [--rollback] [--foreground] [--coordinator PANE]`
+  — a launch only re-executes itself detached (`systemd-run --unit=herdr-cutover … --foreground`, its own
+  cgroup); herdr CLI as the service user with HOME set, root only for systemd steps. Exit 0 done, 2
+  config/preflight, 3 aborted before step 4, 4 rolled back, 5 finished with recorded problems. State per
+  run under `STATE_DIR/<run-id>/` (manifest, result, copies, old tree, old unit, old nightly script),
+  `STATE_DIR/latest` → the newest run. The full contract is pinned in
+  `backend/tests/acceptance/cutover_world.py`. Steps before 4 abort with nothing changed:
   1. **Manifest**: copy `session.json` + newest session snapshot; record `pane list`, `agent list`,
      `pane process-info`, `/proc/<pid>/cmdline` per pane. Abort if an agent pane has no session ref.
      `--dry-run` stops here and prints the planned commands.
@@ -102,8 +118,12 @@ by every lane that edits the hook.
      re-copy `session.json`.
   4. **Stop the web unit** (this also ends the old in-cgroup server); wait until no `herdr server` runs and the
      socket refuses; check `session.json` parses with the manifest's tab count, else restore the copy.
-  5. **Deploy** the staged backend + frontend (old tree kept); start web; prove the guard live (E-6).
-  6. **Start herdr.service**; wait for the socket; assert cgroup and pane count.
+  5. **Deploy** the staged tree (`STAGE_DIR/backend/{app,static,requirements.txt}` + `STAGE_DIR/REVISION`; old
+     tree kept); render and start the **web unit only** — `herdr.service` is not installed yet, because the web
+     unit's `Wants=` would start it; disable and move out the legacy web unit; prove the guard live (E-6).
+  6. **Install and start herdr.service**; install `deploy/herdr-update.sh` at the host's nightly-script path
+     (old one kept); wait for the socket; assert MainPID = the one server, and the pane count.
+     A failure in step 5 or 6 rolls back by itself.
   7. **Relaunch** (Decision 11): every agent quit in step 3 had its `agent_session` cleared, so native resume
      will not bring it back. Per manifest row, once the pane's foreground is the shell: `claude --resume <uuid>` /
      `pi --session <path>` (no prompt yet → plain `claude` / `pi`); wait ≤ 60 s for `pane list` to show the agent
@@ -111,8 +131,10 @@ by every lane that edits the hook.
   8. **Resume**: per pane `agent wait --until idle`, then send `resume` + Enter (blocked on a dialog → skip,
      record). Coordinator last.
   9. **Verify + report**: result file; independent E-checks; restart web once (E-3); notify the owner.
-  Rollback after step 4: stop herdr.service, restore old tree, start web (first attach auto-starts a server,
-  which restores and resumes natively).
+  Rollback after step 4 (automatic in 5–6, `--rollback` later): stop the new web unit and herdr.service,
+  remove both unit files, restore the old tree, the legacy unit file and the old nightly script byte for
+  byte, re-enable and start the legacy web unit (first attach auto-starts a server, which restores the
+  layout; agents quit in step 3 are relaunched by hand from the manifest).
 - Coordinator protocol: before launching, write a handoff file (step, pending checks, result-file path) and
   commit; launch the unit; confirm its cgroup is not the web unit's; end the turn. On "resume", read the handoff.
 
@@ -142,48 +164,64 @@ by every lane that edits the hook.
 | P1 | C: `input/*`, `useHerdrTerminal.ts`, `Keys.tsx`, `App.tsx` modifier indicator, CSS for it | F6, F8, F9 | verify C-* |
 | P1 | D: `micSubmit.ts`, `Mic.tsx`, `socketPolicy.ts`, `terminalSocket.ts`, `App.tsx` connection indicator | F7, F13 client | verify D-* |
 | P2 | E (serial) | stage, cutover, deploy, live checks | verify E-* |
-| P3 | V | owner sign-off on a real phone | sign V-* |
+| P3 | V | phone checks in WebKit (iPhone profile) on the build VM, then a final review by a higher model | verify V-* |
 
 `App.tsx` is shared by C and D in different components; C lands first, D rebases; both re-verify after merge.
 
 ## 6. Requirements (generated — `prd/acceptance.json`)
 <!-- prd:items -->
-- [ ] **A-1** missing herdr binary → close 4500 after accept, no fork; exec failure in _spawn → child exit 127, no Python cleanup — _fixture-test, sonnet_
-- [ ] **A-2** herdr client exit → close 1012 within 2 s, also while output is backed up — _fixture-test, sonnet_
-- [ ] **A-3** no socket / stale socket / silent listener → close 4503 after accept, client never executed, probe bounded and off the event loop — _fixture-test, sonnet_
-- [ ] **A-4** nine spawn failures then a success still connects (live-terminal counter not leaked) — _fixture-test, sonnet_
-- [ ] **A-5** multi-MB output to a slow consumer: byte-exact in order below OUT_Q_MAX_BYTES; above it close 1013 "output backlog", never silent loss — _fixture-test, sonnet_
-- [ ] **A-6** text {"type":"bogus"} dropped; input works; binary bogus JSON forwarded verbatim; untyped text, resize, ping unchanged — _fixture-test, sonnet_
-- [ ] **A-7** terminal limit → close 1013 with a reason after accept (and foreign Origin → 1008 after accept) — _fixture-test, sonnet_
+- [x] **A-1** missing herdr binary → close 4500 after accept, no fork; exec failure in _spawn → child exit 127, no Python cleanup — _fixture-test, sonnet_
+- [x] **A-2** herdr client exit → close 1012 within 2 s, also while output is backed up — _fixture-test, sonnet_
+- [x] **A-3** no socket / stale socket / silent listener → close 4503 after accept, client never executed, probe bounded and off the event loop — _fixture-test, sonnet_
+- [x] **A-4** nine spawn failures then a success still connects (live-terminal counter not leaked) — _fixture-test, sonnet_
+- [x] **A-5** multi-MB output to a slow consumer: byte-exact in order below OUT_Q_MAX_BYTES; above it close 1013 "output backlog", never silent loss — _fixture-test, sonnet_
+- [x] **A-6** text {"type":"bogus"} dropped; input works; binary bogus JSON forwarded verbatim; untyped text, resize, ping unchanged — _fixture-test, sonnet_
+- [x] **A-7** terminal limit → close 1013 with a reason after accept (and foreign Origin → 1008 after accept) — _fixture-test, sonnet_
 - [x] **B-1** pane blocked at resubscribe with no event → exactly one push (reconcile on every (re)subscribe) — _fixture-test, sonnet_
 - [x] **B-2** one pending confirm per pane: flicker inside the window → 1 push; blocked→working stays → 0; two episodes → 2 — _fixture-test, sonnet_
 - [x] **B-3** /docs, /redoc, /openapi.json → 404 — _test, sonnet_
 - [x] **B-4** requirements.txt = the full exact-pinned freeze of the running venv — _test, sonnet_
 - [x] **B-5** deploy/herdr.service + herdr-web.service parse as INI with the PRD 4.3 keys; no hard dependency; install.sh installs system units — _test, sonnet_
-- [ ] **B-6** docs updated: API close codes and frames, deployment notes, no token-gate text (checklist) — _visual, sonnet_
+- [ ] **B-6** docs describe the system as built: API close codes (after accept) and frames, the two system units (no --user, no retired unit, no stale install steps, env path = installer's), the correct allowlist note, no token-gate text — _test, sonnet_
 - [x] **B-7** bracketed IPv6 loopback Host ([::1], [::1]:port) accepted by the default allowlist; other hosts still 400 — _test, sonnet_
-- [ ] **C-1** sanitizePaste drops ESC, C0 (keeps \t\n\r), DEL, C1; bracketed-paste breakout comes out inert — _test, sonnet_
-- [ ] **C-2** every paste path goes through sanitizePaste (native, Ctrl+V, keyboard, Controls › Paste, image); OSC 52 over the cap ignored with a toast — _fixture-test, sonnet_
-- [ ] **C-3** modifier machine once/locked/off transitions with an injected clock; hook uses it — _test, sonnet_
-- [ ] **C-4** paste/report sources never modified, never consume; Alt on \r \t \x7f — _test, sonnet_
-- [ ] **C-5** composing keyboard: Ctrl once + update "c" → exactly 0x03 + consumeModifier; "ca"/end "c" → no c, no 0x7f; once cleared from composition/tray — _test, sonnet_
-- [ ] **C-6** regression: iPhone dictation replacement, extending and rewriting an earlier word (insertText and composition) → clean final text; hook uses the composer — _test, sonnet_
-- [ ] **C-7** regression: iOS predictive, Gboard and hardware traces byte-identical — _test, sonnet_
-- [ ] **C-8** (F9a) commit with trailing chars → only the remainder, before and after the commit timer — _test, sonnet_
-- [ ] **C-9** (F9b) start, update "hel", onData("hel", keydownFinalize), onData("\r"), end → exactly hel\r — _test, sonnet_
-- [ ] **C-10** (F9c) re-composition into an existing word does not retype it — _test, sonnet_
-- [ ] **C-11** (F9d) sendFailed / socket reset → composer reset, no backspaces for undelivered text — _test, sonnet_
-- [ ] **C-12** (F9e) non-tail replacement → zero bytes (insertText and insertReplacementText) + clearTextarea; tail replacement is prefix-minimal — _test, sonnet_
-- [ ] **C-13** (F9f) backspace counts in grapheme clusters: ZWJ family, flag, e+U+0301 with exact bytes — _test, sonnet_
-- [ ] **C-14** (F9g/h) duplicate-commit guard drops only xterm's pending commit, once; second identical composition is sent — _test, sonnet_
-- [ ] **C-15** e2e: dictation (both modes, extending and rewriting), predictive, hardware, paste breakout, Ctrl on a composition and on a hardware key (indicator clears), tray Enter/^C clear the textarea, socket drop mid-composition sends no 7f after reopen — _fixture-test, sonnet_
-- [ ] **C-16** e2e exact bytes, real keys: hardware Enter mid-composition → hel\r then \r; dictation "ok" + typed "ok" → okok; autocorrect collapsed caret teh→the → 7f 7f he — _fixture-test, sonnet_
-- [ ] **D-1** Mic: Enter timer fired > 1.5 s late → no Enter, text kept, toast; Mic.tsx uses submitDictation — _test, sonnet_
-- [ ] **D-2** Mic: pane blocked now / gone / status failed → no Enter; blocked at deliver time → text not sent — _test, sonnet_
-- [ ] **D-3** 1008/1013/4503/4500 and N never-opened closes → visible message (with the reason), retry with backoff; terminalSocket uses the policy — _test, sonnet_
-- [ ] **D-4** handshake not open within CONNECT_TIMEOUT_MS → abandoned and retried — _test, sonnet_
-- [ ] **D-5** reconnect while CONNECTING replaces the pending socket — _test, sonnet_
-- [ ] **D-6** e2e: mocked close 1013/4503 shows the message; a never-opening handshake leads to a second socket; Mic into a blocked pane sends nothing, into an idle pane sends text then Enter — _fixture-test, sonnet_
+- [x] **C-1** sanitizePaste drops ESC, C0 (keeps \t\n\r), DEL, C1; bracketed-paste breakout comes out inert — _test, sonnet_
+- [x] **C-2** every paste path goes through sanitizePaste (native, Ctrl+V, keyboard, Controls › Paste, image); OSC 52 over the cap ignored with a toast — _fixture-test, sonnet_
+- [x] **C-3** modifier machine once/locked/off transitions with an injected clock; hook uses it — _test, sonnet_
+- [x] **C-4** paste/report sources never modified, never consume; Alt on \r \t \x7f — _test, sonnet_
+- [x] **C-5** composing keyboard: Ctrl once + update "c" → exactly 0x03 + consumeModifier; "ca"/end "c" → no c, no 0x7f; once cleared from composition/tray — _test, sonnet_
+- [x] **C-6** regression: iPhone dictation replacement, extending and rewriting an earlier word (insertText and composition) → clean final text; hook uses the composer — _test, sonnet_
+- [x] **C-7** regression: iOS predictive, Gboard and hardware traces byte-identical — _test, sonnet_
+- [x] **C-8** (F9a) commit with trailing chars → only the remainder, before and after the commit timer — _test, sonnet_
+- [x] **C-9** (F9b) start, update "hel", onData("hel", keydownFinalize), onData("\r"), end → exactly hel\r — _test, sonnet_
+- [x] **C-10** (F9c) re-composition into an existing word does not retype it — _test, sonnet_
+- [x] **C-11** (F9d) sendFailed / socket reset → composer reset, no backspaces for undelivered text — _test, sonnet_
+- [x] **C-12** (F9e) non-tail replacement → zero bytes (insertText and insertReplacementText) + clearTextarea; tail replacement is prefix-minimal — _test, sonnet_
+- [x] **C-13** (F9f) backspace counts in grapheme clusters: ZWJ family, flag, e+U+0301 with exact bytes — _test, sonnet_
+- [x] **C-14** (F9g/h) duplicate-commit guard drops only xterm's pending commit, once; second identical composition is sent — _test, sonnet_
+- [x] **C-15** e2e: dictation (both modes, extending and rewriting), predictive, hardware, paste breakout, Ctrl on a composition and on a hardware key (indicator clears), tray Enter/^C clear the textarea, socket drop mid-composition sends no 7f after reopen — _fixture-test, sonnet_
+- [x] **C-16** e2e exact bytes, real keys: hardware Enter mid-composition → hel\r then \r; dictation "ok" + typed "ok" → okok; autocorrect collapsed caret teh→the → 7f 7f he — _fixture-test, sonnet_
+- [x] **D-1** Mic: Enter timer fired > 1.5 s late → no Enter, text kept, toast; Mic.tsx uses submitDictation — _test, sonnet_
+- [x] **D-2** Mic: pane blocked now / gone / status failed → no Enter; blocked at deliver time → text not sent — _test, sonnet_
+- [x] **D-3** 1008/1013/4503/4500 and N never-opened closes → visible message (with the reason), retry with backoff; terminalSocket uses the policy — _test, sonnet_
+- [x] **D-4** handshake not open within CONNECT_TIMEOUT_MS → abandoned and retried — _test, sonnet_
+- [x] **D-5** reconnect while CONNECTING replaces the pending socket — _test, sonnet_
+- [x] **D-6** e2e: mocked close 1013/4503 shows the message; a never-opening handshake leads to a second socket; Mic into a blocked pane sends nothing, into an idle pane sends text then Enter — _fixture-test, sonnet_
+- [ ] **E-F1** cutover manifest: --dry-run lists every pane (agent, session ref, action, relaunch argv) and changes nothing; an agent pane without a session ref aborts (exit 3, nothing changed); a launch only detaches (systemd-run --unit=herdr-cutover) — _fixture-test, sonnet_
+- [ ] **E-F2** idle gate: blocked aborts at once; working waits up to IDLE_WAIT_S then aborts; working that turns idle proceeds; --force passes — _fixture-test, sonnet_
+- [ ] **E-F3** one ctrl+c ctrl+c per agent, coordinator last (SIGTERM fallback); old web unit stopped on the old tree; session.json restored; staged tree deployed; new web unit starts with no server and no herdr.service yet; guard 4503 proven; herdr.service + no-handoff nightly script installed; web restart keeps the server; owner notified — _fixture-test, sonnet_
+- [ ] **E-F4** relaunch per manifest row (claude --resume <uuid>, pi --session <path>, plain argv when never prompted); native resume not relaunched; mismatch recorded, not retried; resume + Enter only once idle, skipped when blocked; coordinator last — _fixture-test, sonnet_
+- [ ] **E-F5** rollback (automatic on a step 5/6 failure, and --rollback) restores the old tree, the old unit and the old nightly script byte for byte; herdr.service stops before the old web unit starts — _fixture-test, sonnet_
+- [ ] **E-F6** deploy/herdr-update.sh: hooks first, plain `herdr update` (never --handoff), a busy or missing idle-wait skips only the update — _fixture-test, sonnet_
+- [ ] **E-1** live, read-only: cutover --dry-run manifest lists every live pane with agent, session ref and planned action (refuses until E-F1 is verified) — _live-check, sonnet_
+- [ ] **E-2** live, read-only: exactly one herdr server, in HERDR_UNIT's cgroup and its MainPID; status server answers on HERDR_HOME's socket; no server in the web unit — _live-check, sonnet_
+- [ ] **E-3** live, MUTATES (restarts the web unit once, after the cutover only): herdr server PID, pane set and every pane's process PIDs unchanged; web cgroup holds only uvicorn and `herdr --session` clients — _live-check, sonnet_
+- [ ] **E-4** live, read-only: every manifest agent is back with its agent and session id; the id is in /proc cmdline; each Claude transcript gained a user `resume` after the cutover start — _live-check, sonnet_
+- [ ] **E-5** live, read-only: deployed backend/app = staged tree = repo at STAGE_DIR/REVISION; served index.html and every /assets file = the build output — _live-check, sonnet_
+- [ ] **E-6** live, read-only: the cutover recorded its in-window guard proof (server down + new backend up -> attach closed 4503, no herdr server appeared) — _live-check, sonnet_
+- [ ] **E-7** live, read-only: the installed nightly script is the repo's deploy/herdr-update.sh (no --handoff) and herdr-update.service runs it — _live-check, sonnet_
+- [x] **V-1** phone (WebKit, iPhone profile, build VM): dictation insertText/composition, extending and rewriting, and iOS predictive give exact bytes; tray Enter after a dictation sends \r and clears the textarea; screenshots saved — _fixture-test, sonnet_
+- [x] **V-2** phone (WebKit, iPhone profile, build VM): tray Ctrl/Alt one tap = next letter only (indicator clears), double tap locks until a further tap; exact bytes; screenshots saved — _fixture-test, sonnet_
+- [x] **V-3** phone (WebKit, iPhone profile, build VM): Mic countdown frozen past its due time (locked phone) -> no Enter, text kept, warning toast; an on-time countdown still sends text then Enter; screenshots saved — _fixture-test, sonnet_
 <!-- /prd:items -->
 
 ### 6.1 Requirement intent
@@ -224,7 +262,9 @@ by every lane that edits the hook.
   httptools, uvloop, pydantic_core).
 - B-5 unit files parse as INI: herdr unit has the keys in §4.3; web unit `Wants=`+`After=herdr.service`; no
   `Requires=`/`BindsTo=`/`PartOf=` between them; `install.sh` installs system units.
-- B-6 (checklist, not locked) docs updated: API close codes and frames, deployment notes, no token-gate text.
+- B-6 (locked test, was a checklist) the docs describe the system as built: API close codes after accept and
+  frame types; the two system units with no `--user` command, no retired unit, no stale install step, the
+  installer's env path; the correct allowlist note (default = `config.py`'s); no token-gate text.
 - B-7 a bracketed IPv6 loopback Host is accepted by the default allowlist.
 
 **C (frontend input)**
@@ -263,6 +303,11 @@ by every lane that edits the hook.
 - D-6 e2e: mocked close 1013/4503 shows the message; a never-opening handshake leads to a second socket.
 
 **E (ops, live)**
+- E-F1..E-F6 (offline fixture tests of `deploy/cutover.sh` and `deploy/herdr-update.sh` against the fake herdr
+  API, fake systemctl/systemd-run on PATH; assertions on recorded ledgers): manifest + dry run + abort, idle
+  gate, quit/stop/deploy/units/guard, relaunch/resume, rollback, nightly script.
+- E-1..E-7 are live checks on the cut-over host (`backend/tests/live/e_checks.py`, `HW_HOST_ENV`); read-only
+  except E-3, which restarts the web unit once and refuses without `HW_E3_RESTART_OK=1` and E-2 holding.
 - E-1 cutover `--dry-run` manifest lists every pane with agent, session ref and planned action.
 - E-2 `herdr status server --json` + `/proc/<pid>/cgroup` → server in `herdr.service`.
 - E-3 restart web → herdr server PID and every pane child PID unchanged; web cgroup holds only uvicorn and
@@ -273,8 +318,16 @@ by every lane that edits the hook.
 - E-6 (in the cutover window) server down + new backend up → attach gets 4503 and no `herdr server` appears.
 - E-7 nightly update path per P0-1 (proven or switched).
 
-**V (owner, real phone)** — V-1 dictation/predictive clean; V-2 Ctrl once + double-tap lock; V-3 Mic
-late-Enter skip toast (lock the phone during the countdown).
+**V (phone, replaces the owner's sign-off — 2026-11-15)** — the owner signs nothing visually. Each V item is a
+fixture-test in Playwright **WebKit** (Safari's engine) with the iPhone 15 profile (`has_touch`, `is_mobile`),
+run on the build VM (`frontend/e2e/check_vm.sh`), exact bytes on the mocked socket, one screenshot per scenario
+saved for review. Sign-off = these checks green **plus a final review pass by a higher model** over the code and
+the screenshots.
+- V-1 dictation (insertText and composition, extending and rewriting) and predictive text → exact bytes; tray
+  Enter after a dictation → `\r` and a cleared textarea.
+- V-2 tray Ctrl / Alt: one tap = the next letter only and the indicator clears; double tap locks until a further tap.
+- V-3 Mic: a countdown frozen past its due time (a locked phone) → no Enter, text kept, warning toast; an on-time
+  countdown still sends the text, then Enter.
 
 ## 7. Risks
 
@@ -308,6 +361,8 @@ late-Enter skip toast (lock the phone during the countdown).
 | 11 | Cutover relaunch | relaunch every quit agent from the manifest (`claude --resume <uuid>`, `pi --session <path>`); an agent with no prompt yet is relaunched fresh | P0-3: a clean quit clears `agent_session`, so native resume will not fire for quit panes; quit = one `send-keys ctrl+c ctrl+c` call (≈0.8 s claude, ≈0.4 s pi) | 2026-11-15 |
 | 12 | herdr.service locale | keep today's `LANG=C`, `LC_CTYPE=C.UTF-8` | behaviour-neutral for every pane | 2026-11-15 |
 | 13 | Guard scope (A-3) | probe only before spawning a client | P0-2: no CLI verb (`pane list`, `api snapshot`, `status`) auto-starts a server; only a client attach does | 2026-11-15 |
+| 14 | Unit names at cutover | migrate to the repo names (`herdr.service`, `herdr-web.service`); host values from a host-values file outside the repo; the legacy web unit is disabled and moved out in the step that starts the new web unit, restored by rollback | one unit layout for every host; nothing host-specific in the repo | 2026-11-15 |
+| 15 | Phone sign-off (V) and docs (B-6) | owner signs nothing visually: V-1..V-3 are WebKit/iPhone e2e checks on the build VM with screenshots, B-6 a locked docs test; a higher model does a final review pass | owner | 2026-11-15 |
 
 ## 9. Open decisions
 

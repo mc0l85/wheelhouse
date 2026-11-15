@@ -21,3 +21,6 @@ build/
 
 # acceptance-test venv (backend/tests/make_test_venv.sh)
 backend/.venv-test/
+
+# e2e screenshots for model review (check_vm.sh)
+frontend/e2e/results/shots/

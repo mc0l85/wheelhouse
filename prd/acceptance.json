@@ -8,7 +8,11 @@
     "Skeleton change: socketPolicy.onClose(code, reason, everOpened, failStreak) + export NEVER_OPENED_LIMIT (a pure function cannot count 'N closes without opening'). A refusal message contains the server's close reason.",
     "Page facts pinned by the e2e: modifier indicator `.mod-ind` (visible while armed); toasts `.toast` / `.toast.bad`; the connection message is visible page text; Mic button `button.mic-btn`, delivery via POST /api/panes/<id>/send-text then /send-keys.",
     "C-14's tray Enter/^C textarea clear is verified by the C-15 e2e scenario `tray-clear`.",
-    "e2e items (network: true) need HW_BUILD_ENV pointing at an env file (outside the repo) with the BUILD_* variables."
+    "e2e items (network: true) need HW_BUILD_ENV pointing at an env file (outside the repo) with the BUILD_* variables.",
+    "P2 lane E: the cutover contract (deploy/cutover.sh CLI, host-env keys, exit codes, STATE_DIR layout, manifest and result.json schemas, how a herdr server is recognised) is pinned in backend/tests/acceptance/cutover_world.py. E-F* run fully offline: fake herdr API server + fake herdr CLI (tests/fakes/herdr_cli.py), fake systemctl / systemd-run / notify on PATH (tests/fakes/systemd_fake.py), fake web (tests/fakes/web_fake.py); assertions are on the recorded ledger and the fake server's input/status logs.",
+    "Live checks E-1..E-7 (backend/tests/live/e_checks.py) need HW_HOST_ENV = the host-values file deploy/cutover.sh reads (outside the repo; it also names HOST_NAME, and each check refuses on any other machine). All are read-only probes except E-3, which restarts the web unit once and refuses unless HW_E3_RESTART_OK=1 and E-2 holds. E-1 refuses to dry-run live until E-F1 is verified. They are red until the cutover has run.",
+    "V-1..V-3 replace the owner's real-phone sign-off (2026-11-15): Playwright WebKit (playwright 1.60.0 / webkit-2287, pinned in frontend/e2e/vm_ssh.sh, installed by setup_vm_webkit.sh) with the iPhone 15 profile, run ON THE BUILD VM by check_vm.sh (needs HW_BUILD_ENV); screenshots land in frontend/e2e/results/shots/ (gitignored) for a model review. They pass on main (P1 shipped the fixes), so they are guards (\"guard\": true), not prove-red items; watched failing on a pre-P1 build (2026-11-15): V-1 dictation-composition / rewrite-composition / tray-enter, V-2 all four, V-3 late-enter all FAIL there. Linux WebKit does not turn a touch tap into a click, so tray keys are pointer clicks.",
+    "B-6 is a locked test (test_b6.py), no longer a visual checklist."
   ],
   "items": [
     {
@@ -432,16 +436,30 @@
     },
     {
       "id": "B-6",
-      "title": "docs updated: API close codes and frames, deployment notes, no token-gate text (checklist)",
+      "title": "docs describe the system as built: API close codes (after accept) and frames, the two system units (no --user, no retired unit, no stale install steps, env path = installer's), the correct allowlist note, no token-gate text",
       "phase": "P1",
       "lane": "B",
-      "class": "visual",
-      "check": "true",
-      "files": [],
+      "class": "test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b6.py",
+      "files": [
+        "backend/tests/acceptance/test_b6.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/constraints.txt",
+        "backend/tests/requirements-test.txt",
+        "backend/tests/make_test_venv.sh"
+      ],
       "builder": "sonnet",
       "network": false,
-      "timeout": 30,
-      "status": "open"
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T17:38:34-06:00",
+        "rc": 1,
+        "head": "8bef0c3"
+      }
     },
     {
       "id": "B-7",
@@ -1115,11 +1133,398 @@
         "check": "frontend/e2e/check_items.sh D-6",
         "tail": "ff2               14.06 kB\ndist/assets/outfit-latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.92s\nbuilt acc-hw-lane-d -> /tmp/hw-acc-dist.KAvsXv\n  .. close-message ok\n  .. never-open ok\n  .. mic-blocked ok\n  .. mic-enter ok\n"
       }
+    },
+    {
+      "id": "E-F1",
+      "title": "cutover manifest: --dry-run lists every pane (agent, session ref, action, relaunch argv) and changes nothing; an agent pane without a session ref aborts (exit 3, nothing changed); a launch only detaches (systemd-run --unit=herdr-cutover)",
+      "phase": "P2",
+      "lane": "E",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef1_manifest.py",
+      "files": [
+        "backend/tests/acceptance/test_ef1_manifest.py",
+        "backend/tests/acceptance/cutover_world.py",
+        "backend/tests/fakes/herdr_cli.py",
+        "backend/tests/fakes/systemd_fake.py",
+        "backend/tests/fakes/web_fake.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/constraints.txt",
+        "backend/tests/requirements-test.txt",
+        "backend/tests/make_test_venv.sh"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 900,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T17:38:37-06:00",
+        "rc": 1,
+        "head": "8bef0c3"
+      }
+    },
+    {
+      "id": "E-F2",
+      "title": "idle gate: blocked aborts at once; working waits up to IDLE_WAIT_S then aborts; working that turns idle proceeds; --force passes",
+      "phase": "P2",
+      "lane": "E",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef2_idle_gate.py",
+      "files": [
+        "backend/tests/acceptance/test_ef2_idle_gate.py",
+        "backend/tests/acceptance/cutover_world.py",
+        "backend/tests/fakes/herdr_cli.py",
+        "backend/tests/fakes/systemd_fake.py",
+        "backend/tests/fakes/web_fake.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/constraints.txt",
+        "backend/tests/requirements-test.txt",
+        "backend/tests/make_test_venv.sh"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 900,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T17:38:39-06:00",
+        "rc": 1,
+        "head": "8bef0c3"
+      }
+    },
+    {
+      "id": "E-F3",
+      "title": "one ctrl+c ctrl+c per agent, coordinator last (SIGTERM fallback); old web unit stopped on the old tree; session.json restored; staged tree deployed; new web unit starts with no server and no herdr.service yet; guard 4503 proven; herdr.service + no-handoff nightly script installed; web restart keeps the server; owner notified",
+      "phase": "P2",
+      "lane": "E",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef3_quit_stop_deploy.py",
+      "files": [
+        "backend/tests/acceptance/test_ef3_quit_stop_deploy.py",
+        "backend/tests/acceptance/cutover_world.py",
+        "backend/tests/fakes/herdr_cli.py",
+        "backend/tests/fakes/systemd_fake.py",
+        "backend/tests/fakes/web_fake.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/constraints.txt",
+        "backend/tests/requirements-test.txt",
+        "backend/tests/make_test_venv.sh"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 900,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T17:38:41-06:00",
+        "rc": 1,
+        "head": "8bef0c3"
+      }
+    },
+    {
+      "id": "E-F4",
+      "title": "relaunch per manifest row (claude --resume <uuid>, pi --session <path>, plain argv when never prompted); native resume not relaunched; mismatch recorded, not retried; resume + Enter only once idle, skipped when blocked; coordinator last",
+      "phase": "P2",
+      "lane": "E",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef4_relaunch_resume.py",
+      "files": [
+        "backend/tests/acceptance/test_ef4_relaunch_resume.py",
+        "backend/tests/acceptance/cutover_world.py",
+        "backend/tests/fakes/herdr_cli.py",
+        "backend/tests/fakes/systemd_fake.py",
+        "backend/tests/fakes/web_fake.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/constraints.txt",
+        "backend/tests/requirements-test.txt",
+        "backend/tests/make_test_venv.sh"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 900,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T17:38:43-06:00",
+        "rc": 1,
+        "head": "8bef0c3"
+      }
+    },
+    {
+      "id": "E-F5",
+      "title": "rollback (automatic on a step 5/6 failure, and --rollback) restores the old tree, the old unit and the old nightly script byte for byte; herdr.service stops before the old web unit starts",
+      "phase": "P2",
+      "lane": "E",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef5_rollback.py",
+      "files": [
+        "backend/tests/acceptance/test_ef5_rollback.py",
+        "backend/tests/acceptance/cutover_world.py",
+        "backend/tests/fakes/herdr_cli.py",
+        "backend/tests/fakes/systemd_fake.py",
+        "backend/tests/fakes/web_fake.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/constraints.txt",
+        "backend/tests/requirements-test.txt",
+        "backend/tests/make_test_venv.sh"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 900,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T17:38:44-06:00",
+        "rc": 1,
+        "head": "8bef0c3"
+      }
+    },
+    {
+      "id": "E-F6",
+      "title": "deploy/herdr-update.sh: hooks first, plain `herdr update` (never --handoff), a busy or missing idle-wait skips only the update",
+      "phase": "P2",
+      "lane": "E",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef6_update_script.py",
+      "files": [
+        "backend/tests/acceptance/test_ef6_update_script.py",
+        "backend/tests/acceptance/cutover_world.py",
+        "backend/tests/fakes/herdr_cli.py",
+        "backend/tests/fakes/systemd_fake.py",
+        "backend/tests/fakes/web_fake.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/constraints.txt",
+        "backend/tests/requirements-test.txt",
+        "backend/tests/make_test_venv.sh"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 900,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T17:38:45-06:00",
+        "rc": 1,
+        "head": "8bef0c3"
+      }
+    },
+    {
+      "id": "E-1",
+      "title": "live, read-only: cutover --dry-run manifest lists every live pane with agent, session ref and planned action (refuses until E-F1 is verified)",
+      "phase": "P2",
+      "lane": "E",
+      "class": "live-check",
+      "check": "python3 backend/tests/live/e_checks.py E-1",
+      "files": [
+        "backend/tests/live/e_checks.py"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 300,
+      "status": "open",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+    },
+    {
+      "id": "E-2",
+      "title": "live, read-only: exactly one herdr server, in HERDR_UNIT's cgroup and its MainPID; status server answers on HERDR_HOME's socket; no server in the web unit",
+      "phase": "P2",
+      "lane": "E",
+      "class": "live-check",
+      "check": "python3 backend/tests/live/e_checks.py E-2",
+      "files": [
+        "backend/tests/live/e_checks.py"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 300,
+      "status": "open",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+    },
+    {
+      "id": "E-3",
+      "title": "live, MUTATES (restarts the web unit once, after the cutover only): herdr server PID, pane set and every pane's process PIDs unchanged; web cgroup holds only uvicorn and `herdr --session` clients",
+      "phase": "P2",
+      "lane": "E",
+      "class": "live-check",
+      "check": "python3 backend/tests/live/e_checks.py E-3",
+      "files": [
+        "backend/tests/live/e_checks.py"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 300,
+      "status": "open",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
+      "mutates": "restarts WEB_UNIT once (sudo -n systemctl restart). Refuses (exit 3, nothing touched) unless HW_E3_RESTART_OK=1 AND E-2 holds at that moment. Never part of prove-red; run it only after the cutover, with the owner's authorization for the restart."
+    },
+    {
+      "id": "E-4",
+      "title": "live, read-only: every manifest agent is back with its agent and session id; the id is in /proc cmdline; each Claude transcript gained a user `resume` after the cutover start",
+      "phase": "P2",
+      "lane": "E",
+      "class": "live-check",
+      "check": "python3 backend/tests/live/e_checks.py E-4",
+      "files": [
+        "backend/tests/live/e_checks.py"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 300,
+      "status": "open",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+    },
+    {
+      "id": "E-5",
+      "title": "live, read-only: deployed backend/app = staged tree = repo at STAGE_DIR/REVISION; served index.html and every /assets file = the build output",
+      "phase": "P2",
+      "lane": "E",
+      "class": "live-check",
+      "check": "python3 backend/tests/live/e_checks.py E-5",
+      "files": [
+        "backend/tests/live/e_checks.py"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 300,
+      "status": "open",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+    },
+    {
+      "id": "E-6",
+      "title": "live, read-only: the cutover recorded its in-window guard proof (server down + new backend up -> attach closed 4503, no herdr server appeared)",
+      "phase": "P2",
+      "lane": "E",
+      "class": "live-check",
+      "check": "python3 backend/tests/live/e_checks.py E-6",
+      "files": [
+        "backend/tests/live/e_checks.py"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 300,
+      "status": "open",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+    },
+    {
+      "id": "E-7",
+      "title": "live, read-only: the installed nightly script is the repo's deploy/herdr-update.sh (no --handoff) and herdr-update.service runs it",
+      "phase": "P2",
+      "lane": "E",
+      "class": "live-check",
+      "check": "python3 backend/tests/live/e_checks.py E-7",
+      "files": [
+        "backend/tests/live/e_checks.py"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 300,
+      "status": "open",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+    },
+    {
+      "id": "V-1",
+      "title": "phone (WebKit, iPhone profile, build VM): dictation insertText/composition, extending and rewriting, and iOS predictive give exact bytes; tray Enter after a dictation sends \\r and clears the textarea; screenshots saved",
+      "phase": "P3",
+      "lane": "V",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_vm.sh V-1",
+      "files": [
+        "frontend/e2e/acceptance_v.py",
+        "frontend/e2e/check_vm.sh",
+        "frontend/e2e/vm_ssh.sh",
+        "frontend/e2e/setup_vm_webkit.sh",
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1800,
+      "status": "done",
+      "guard": true,
+      "evidence": {
+        "at": "2026-11-15T17:40:01-06:00",
+        "rc": 0,
+        "head": "8bef0c3",
+        "check": "frontend/e2e/check_vm.sh V-1",
+        "tail": "-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\u2713 built in 1.93s\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\nbuilt accv-hw-p2-tests -> /tmp/hw-accv-dist.vEjSxP\n  .. v-dictation-insertText ok\n  .. v-dictation-rewrite-insertText ok\n  .. v-dictation-composition ok\n  .. v-dictation-rewrite-composition ok\n  .. v-predictive ok\n  .. v-tray-enter-after-dictation ok\n"
+      }
+    },
+    {
+      "id": "V-2",
+      "title": "phone (WebKit, iPhone profile, build VM): tray Ctrl/Alt one tap = next letter only (indicator clears), double tap locks until a further tap; exact bytes; screenshots saved",
+      "phase": "P3",
+      "lane": "V",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_vm.sh V-2",
+      "files": [
+        "frontend/e2e/acceptance_v.py",
+        "frontend/e2e/check_vm.sh",
+        "frontend/e2e/vm_ssh.sh",
+        "frontend/e2e/setup_vm_webkit.sh",
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1800,
+      "status": "done",
+      "guard": true,
+      "evidence": {
+        "at": "2026-11-15T17:40:27-06:00",
+        "rc": 0,
+        "head": "8bef0c3",
+        "check": "frontend/e2e/check_vm.sh V-2",
+        "tail": "               14.06 kB\ndist/assets/outfit-latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.90s\nbuilt accv-hw-p2-tests -> /tmp/hw-accv-dist.DT50o6\n  .. v-ctrl-once ok\n  .. v-ctrl-lock ok\n  .. v-alt-once ok\n  .. v-alt-lock ok\n"
+      }
+    },
+    {
+      "id": "V-3",
+      "title": "phone (WebKit, iPhone profile, build VM): Mic countdown frozen past its due time (locked phone) -> no Enter, text kept, warning toast; an on-time countdown still sends text then Enter; screenshots saved",
+      "phase": "P3",
+      "lane": "V",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_vm.sh V-3",
+      "files": [
+        "frontend/e2e/acceptance_v.py",
+        "frontend/e2e/check_vm.sh",
+        "frontend/e2e/vm_ssh.sh",
+        "frontend/e2e/setup_vm_webkit.sh",
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1800,
+      "status": "done",
+      "guard": true,
+      "evidence": {
+        "at": "2026-11-15T17:41:13-06:00",
+        "rc": 0,
+        "head": "8bef0c3",
+        "check": "frontend/e2e/check_vm.sh V-3",
+        "tail": "al-DH66iFdQ.woff2               14.06 kB\ndist/assets/outfit-latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.79s\nbuilt accv-hw-p2-tests -> /tmp/hw-accv-dist.xE53py\n  .. v-mic-late-enter-skipped ok\n  .. v-mic-on-time-enter ok\n"
+      }
     }
   ],
   "lock": {
     "backend/tests/acceptance/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/tests/acceptance/conftest.py": "52e85172c5c987382e338ba48da5188d7040755c4e2466e77c17b5d6c37a3408",
+    "backend/tests/acceptance/cutover_world.py": "f92a9881dec22b1b1d4468a604aa1787431de261f80f4d102de9a956f8265d67",
     "backend/tests/acceptance/pushkit.py": "ae3fe883332d234a8b783afaef9a16d97452206a38ec3421cfc4a7106244cf33",
     "backend/tests/acceptance/test_a1.py": "15b4e13884196ca5adaca545ccc88e8627d81f487d2463a635a6a78e49056ab3",
     "backend/tests/acceptance/test_a2.py": "7d53d3135ec5e85affecc034d40ab68716d87af3cbc1f4481689cad60c0bd343",
@@ -1133,21 +1538,36 @@
     "backend/tests/acceptance/test_b3.py": "a4fd71ecdf6e89c2ec138eea44461f39a7aa57e0ba6c46a163a194a28619f5b4",
     "backend/tests/acceptance/test_b4.py": "1a44e5edb68324ebf4ffedba4fcf0561b5d2f44cc447d776588ceaaf9c732ab1",
     "backend/tests/acceptance/test_b5.py": "2a7d8c77ecb92e62862eaf470fcf6cf7661ef8fa7bf028f6fab975f45128c29d",
+    "backend/tests/acceptance/test_b6.py": "4bffec76a6d68e6af0dcd800822355378d2c77a19763b629ff27be8f223be01e",
     "backend/tests/acceptance/test_b7.py": "ad0aa5ea4d65910b006163e02a65b6fd86310c3056681db2af5960419dc17255",
+    "backend/tests/acceptance/test_ef1_manifest.py": "3eb54ee7c090f71458d5440366b8733cdd7d435249a8c5c01914c1174719c4fb",
+    "backend/tests/acceptance/test_ef2_idle_gate.py": "0f9f4ed8428868ec8cb308ac329f4dede87a00ef0a0f6692669c9100714e8f07",
+    "backend/tests/acceptance/test_ef3_quit_stop_deploy.py": "5bca9e9cc12120ca9e46d285086cf2652879c6a1e1cf0a8614e365d4b9d6f247",
+    "backend/tests/acceptance/test_ef4_relaunch_resume.py": "09d077f8acb6941c65c77645e1384e294002f73a5c4ca8ce1c512c0cba54b68d",
+    "backend/tests/acceptance/test_ef5_rollback.py": "c0939915b91ce27fd62e80b360295419a7f58a6d83401d7093ecc3e96c3a9adb",
+    "backend/tests/acceptance/test_ef6_update_script.py": "a2c61f092ddefeac67cac3a81f2ed5fe002b71976ade794cdf773ee3ec104f24",
     "backend/tests/conftest.py": "50a92e213b54e6f78eb287d5f444f2a4423a8e0d334afd779d4f293cafbebd74",
     "backend/tests/constraints.txt": "9b2ade288b006a2ae7a49cc336ee447d5f5a5e2b514182254822f31051f3c01b",
     "backend/tests/fakes/fake_herdr_api.py": "c3536da989dae978d1390e5ff2db0f28952d978bbd554732ff68de4413166de8",
+    "backend/tests/fakes/herdr_cli.py": "7b2470ab9cc83048db8bd7bfac440d5296e545478ebc9d6d6148145f4bc206c1",
     "backend/tests/fakes/herdr_echo.py": "113758c85797e10274356d018694a821a5083dec0aa51095aef29d7d7be130dd",
     "backend/tests/fakes/herdr_exit.py": "0f1b4fcb3f5b4c9c4a512cbc9957d95b43b0581feca2fbdd64153eb48eff42a9",
     "backend/tests/fakes/herdr_flood.py": "c5f4c6f0e6c2143e000942a0f8a0df6d049ae80715c577ecfbb4611be2d12089",
     "backend/tests/fakes/herdr_marker.py": "883ed8f04e088d78dca5d140c058f7b013b57c94efb0fc28d6a916acfedd17f1",
     "backend/tests/fakes/herdr_record.py": "435648e21bb7c79201c3011ac048de157eb17fcd043fa25853d7f328d21ada9e",
+    "backend/tests/fakes/systemd_fake.py": "007e3d9800bee1837cd265e47337ed21fa8552062740fdeb1f9a5b59fe1adea0",
+    "backend/tests/fakes/web_fake.py": "135fa1eb1be5f059fae157f416cf3ea2bf98c0b7d8d3437c289675c5b5d5c181",
+    "backend/tests/live/e_checks.py": "bd60613b1bad0505ef403b08fadf59d869e626045f3305e0e1145cf68405c41a",
     "backend/tests/make_test_venv.sh": "dd4c914eaa2cf4051a5cfc5184c560478441ec3e7469791a5c36dda79e044f61",
     "backend/tests/requirements-test.txt": "b006188eec3f998cf7157fbdc2a7704c06af9ce7f80929f2ed843df9e3465c36",
     "frontend/e2e/acceptance_e2e.py": "e0b23956d94f09473ba149a0287014ede4766ddbec5e3c96c5f2b38c350f4e0c",
+    "frontend/e2e/acceptance_v.py": "df91364d39896915297711842eed1489608c6bca90afbb627e8e206d067f122c",
     "frontend/e2e/build_remote.sh": "571038def16b416dca18e7c3ddeba17ec5169ea133b6f53e7b2cc165652c577f",
     "frontend/e2e/check_items.sh": "78574112969dea0c12f6583fbee0685e1f03eb9cf044a8a52fff59c0dd6908a4",
+    "frontend/e2e/check_vm.sh": "6020111fbba4247c382612ff4def46bc6162e02cf87bf3d38425a74c06516d81",
     "frontend/e2e/run_e2e.py": "53fb89058dec647826462f9b6aa39fb1df53e9167f3aef8178d72a6e2fb1a8f0",
+    "frontend/e2e/setup_vm_webkit.sh": "8643d355a63408125e6630eec56feda537b47ca2b4be5d4d061ac265f93293ef",
+    "frontend/e2e/vm_ssh.sh": "0ce5f6933dd7cb0a49e9c6dfe88e54eb14fce320f42c5f93b9be2017b7f6cf5f",
     "frontend/test/acceptance/c1.test.ts": "d8025107e2e3007f63ec03cd70b0bfa9044625c1eedb08c00062bd1e214a151e",
     "frontend/test/acceptance/c10.test.ts": "666a1e4cd85a9c5bc792d08a4ba0d8ee2dbef9eccdd081922f54c0b84564004b",
     "frontend/test/acceptance/c11.test.ts": "a33f7045555df31ac60da2f965b76e80a667474d5826601d22049aec4976561a",
@@ -1171,5 +1591,5 @@
     "frontend/test/acceptance/helpers/mic.ts": "e1d6977b6ec28eaf4fc36f7e4714820bc6977fbeb30cbf4672943da77f40ed4a",
     "frontend/vitest.config.ts": "0f8e27f84bcbad6fa87a5d452533498974f1623b8d92e6e6bc329370e9904034"
   },
-  "locked_at": "2026-11-15T16:27:20-06:00"
+  "locked_at": "2026-11-15T17:38:33-06:00"
 }
