@@ -498,11 +498,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:46:43-06:00",
+        "at": "2026-11-15T16:53:44-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c1.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c1.test.ts (9 tests) 11ms\n\n Test Files  1 passed (1)\n      Tests  9 passed (9)\n   Start at  16:46:40\n   Duration  2.61s (transform 105ms, setup 0ms, collect 72ms, tests 11ms, environment 1.33s, prepare 241ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c1.test.ts (9 tests) 11ms\n\n Test Files  1 passed (1)\n      Tests  9 passed (9)\n   Start at  16:53:42\n   Duration  2.07s (transform 72ms, setup 0ms, collect 53ms, tests 11ms, environment 906ms, prepare 148ms)\n\n"
       }
     },
     {
@@ -528,11 +528,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:05-06:00",
+        "at": "2026-11-15T16:54:06-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "frontend/e2e/check_items.sh C-2",
-        "tail": "latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-DaKDOQIw.js                                   580.16 kB \u2502 gzip: 160.52 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.91s\nbuilt acc-hw-lane-c -> /tmp/hw-acc-dist.t60xyg\n  .. paste-native ok\n  .. paste-ctrlv ok\n  .. paste-keyboard ok\n  .. paste-controls ok\n  .. paste-image ok\n  .. osc52-cap ok\n"
+        "tail": "latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.90s\nbuilt acc-hw-lane-d -> /tmp/hw-acc-dist.7bqdD4\n  .. paste-native ok\n  .. paste-ctrlv ok\n  .. paste-keyboard ok\n  .. paste-controls ok\n  .. paste-image ok\n  .. osc52-cap ok\n"
       }
     },
     {
@@ -556,11 +556,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:09-06:00",
+        "at": "2026-11-15T16:54:10-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c3.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c3.test.ts (12 tests) 17ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  16:47:07\n   Duration  1.75s (transform 179ms, setup 0ms, collect 130ms, tests 17ms, environment 902ms, prepare 262ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c3.test.ts (12 tests) 17ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  16:54:07\n   Duration  2.17s (transform 180ms, setup 0ms, collect 126ms, tests 17ms, environment 1.19s, prepare 301ms)\n\n"
       }
     },
     {
@@ -584,11 +584,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:13-06:00",
+        "at": "2026-11-15T16:54:14-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c4.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c4.test.ts (10 tests) 11ms\n\n Test Files  1 passed (1)\n      Tests  10 passed (10)\n   Start at  16:47:10\n   Duration  2.14s (transform 91ms, setup 0ms, collect 60ms, tests 11ms, environment 1.01s, prepare 205ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c4.test.ts (10 tests) 10ms\n\n Test Files  1 passed (1)\n      Tests  10 passed (10)\n   Start at  16:54:11\n   Duration  2.34s (transform 157ms, setup 0ms, collect 63ms, tests 10ms, environment 1.06s, prepare 416ms)\n\n"
       }
     },
     {
@@ -613,11 +613,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:16-06:00",
+        "at": "2026-11-15T16:54:17-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c5.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c5.test.ts (7 tests) 38ms\n\n Test Files  1 passed (1)\n      Tests  7 passed (7)\n   Start at  16:47:14\n   Duration  1.94s (transform 127ms, setup 0ms, collect 126ms, tests 38ms, environment 673ms, prepare 175ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c5.test.ts (7 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  7 passed (7)\n   Start at  16:54:15\n   Duration  2.38s (transform 140ms, setup 0ms, collect 114ms, tests 32ms, environment 1.14s, prepare 254ms)\n\n"
       }
     },
     {
@@ -642,11 +642,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:20-06:00",
+        "at": "2026-11-15T16:54:21-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c6.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c6.test.ts (5 tests) 30ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  16:47:17\n   Duration  2.23s (transform 246ms, setup 0ms, collect 158ms, tests 30ms, environment 984ms, prepare 393ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c6.test.ts (5 tests) 30ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  16:54:19\n   Duration  2.38s (transform 254ms, setup 0ms, collect 181ms, tests 30ms, environment 999ms, prepare 317ms)\n\n"
       }
     },
     {
@@ -671,11 +671,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:24-06:00",
+        "at": "2026-11-15T16:54:25-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c7.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c7.test.ts (4 tests) 28ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  16:47:22\n   Duration  1.92s (transform 153ms, setup 0ms, collect 119ms, tests 28ms, environment 859ms, prepare 274ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c7.test.ts (4 tests) 33ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  16:54:23\n   Duration  1.92s (transform 136ms, setup 0ms, collect 115ms, tests 33ms, environment 646ms, prepare 138ms)\n\n"
       }
     },
     {
@@ -700,11 +700,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:26-06:00",
+        "at": "2026-11-15T16:54:27-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c8.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c8.test.ts (3 tests) 27ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:47:25\n   Duration  1.42s (transform 153ms, setup 0ms, collect 116ms, tests 27ms, environment 704ms, prepare 214ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c8.test.ts (3 tests) 33ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:54:26\n   Duration  1.32s (transform 148ms, setup 0ms, collect 137ms, tests 33ms, environment 658ms, prepare 158ms)\n\n"
       }
     },
     {
@@ -729,11 +729,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:29-06:00",
+        "at": "2026-11-15T16:54:31-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c9.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c9.test.ts (2 tests) 26ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:47:27\n   Duration  1.42s (transform 128ms, setup 0ms, collect 122ms, tests 26ms, environment 684ms, prepare 115ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c9.test.ts (2 tests) 27ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:54:29\n   Duration  1.87s (transform 127ms, setup 0ms, collect 121ms, tests 27ms, environment 661ms, prepare 144ms)\n\n"
       }
     },
     {
@@ -758,11 +758,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:32-06:00",
+        "at": "2026-11-15T16:54:34-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c10.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c10.test.ts (3 tests) 27ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:47:30\n   Duration  2.25s (transform 224ms, setup 0ms, collect 127ms, tests 27ms, environment 1.04s, prepare 312ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c10.test.ts (3 tests) 30ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:54:32\n   Duration  1.76s (transform 203ms, setup 0ms, collect 155ms, tests 30ms, environment 884ms, prepare 349ms)\n\n"
       }
     },
     {
@@ -787,11 +787,11 @@
         "head": "adcb035"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:35-06:00",
+        "at": "2026-11-15T16:54:37-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c11.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c11.test.ts (6 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:47:33\n   Duration  1.34s (transform 152ms, setup 0ms, collect 121ms, tests 32ms, environment 655ms, prepare 164ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c11.test.ts (6 tests) 30ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:54:35\n   Duration  1.42s (transform 136ms, setup 0ms, collect 120ms, tests 30ms, environment 690ms, prepare 154ms)\n\n"
       }
     },
     {
@@ -816,11 +816,11 @@
         "head": "600a157"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:38-06:00",
+        "at": "2026-11-15T16:54:39-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c12.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c12.test.ts (4 tests) 27ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  16:47:36\n   Duration  1.86s (transform 171ms, setup 0ms, collect 116ms, tests 27ms, environment 659ms, prepare 233ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c12.test.ts (4 tests) 30ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  16:54:38\n   Duration  1.42s (transform 120ms, setup 0ms, collect 117ms, tests 30ms, environment 701ms, prepare 120ms)\n\n"
       }
     },
     {
@@ -845,11 +845,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:42-06:00",
+        "at": "2026-11-15T16:54:42-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c13.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c13.test.ts (6 tests) 28ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:47:40\n   Duration  2.00s (transform 122ms, setup 0ms, collect 115ms, tests 28ms, environment 722ms, prepare 153ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c13.test.ts (6 tests) 29ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:54:41\n   Duration  1.32s (transform 150ms, setup 0ms, collect 115ms, tests 29ms, environment 676ms, prepare 158ms)\n\n"
       }
     },
     {
@@ -874,11 +874,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:47:44-06:00",
+        "at": "2026-11-15T16:54:45-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c14.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-c/frontend\n\n \u2713 test/acceptance/c14.test.ts (6 tests) 30ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:47:43\n   Duration  1.44s (transform 132ms, setup 0ms, collect 119ms, tests 30ms, environment 690ms, prepare 174ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/c14.test.ts (6 tests) 31ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  16:54:44\n   Duration  1.38s (transform 145ms, setup 0ms, collect 122ms, tests 31ms, environment 695ms, prepare 168ms)\n\n"
       }
     },
     {
@@ -904,11 +904,11 @@
         "head": "adcb035"
       },
       "evidence": {
-        "at": "2026-11-15T16:48:34-06:00",
+        "at": "2026-11-15T16:55:35-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "frontend/e2e/check_items.sh C-15",
-        "tail": "ormal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-DaKDOQIw.js                                   580.16 kB \u2502 gzip: 160.52 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.90s\nbuilt acc-hw-lane-c -> /tmp/hw-acc-dist.qOPS3i\n  .. dictation-insertText ok\n  .. dictation-composition ok\n  .. dictation-rewrite-insertText ok\n  .. dictation-rewrite-composition ok\n  .. predictive ok\n  .. hardware ok\n  .. paste-breakout ok\n  .. ctrl-composition ok\n  .. ctrl-key ok\n  .. tray-clear ok\n  .. reset-mid-composition ok\n"
+        "tail": "ormal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\u2713 built in 1.95s\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\nbuilt acc-hw-lane-d -> /tmp/hw-acc-dist.cMg2Fy\n  .. dictation-insertText ok\n  .. dictation-composition ok\n  .. dictation-rewrite-insertText ok\n  .. dictation-rewrite-composition ok\n  .. predictive ok\n  .. hardware ok\n  .. paste-breakout ok\n  .. ctrl-composition ok\n  .. ctrl-key ok\n  .. tray-clear ok\n  .. reset-mid-composition ok\n"
       }
     },
     {
@@ -934,11 +934,11 @@
         "head": "adcb035"
       },
       "evidence": {
-        "at": "2026-11-15T16:48:53-06:00",
+        "at": "2026-11-15T16:55:54-06:00",
         "rc": 0,
-        "head": "b057a05",
+        "head": "365bbb8",
         "check": "frontend/e2e/check_items.sh C-16",
-        "tail": "_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-DaKDOQIw.js                                   580.16 kB \u2502 gzip: 160.52 kB\n\u2713 built in 1.89s\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\nbuilt acc-hw-lane-c -> /tmp/hw-acc-dist.FcVFMe\n  .. enter-mid-composition ok\n  .. repeat-after-dictation-composition ok\n  .. repeat-after-dictation-insertText ok\n  .. autocorrect-collapsed ok\n"
+        "tail": "_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\u2713 built in 1.93s\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\nbuilt acc-hw-lane-d -> /tmp/hw-acc-dist.orVyHo\n  .. enter-mid-composition ok\n  .. repeat-after-dictation-composition ok\n  .. repeat-after-dictation-insertText ok\n  .. autocorrect-collapsed ok\n"
       }
     },
     {
@@ -963,11 +963,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:35:33-06:00",
+        "at": "2026-11-15T16:55:59-06:00",
         "rc": 0,
-        "head": "c2f0909",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d1.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d1.test.ts (5 tests) 282ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  16:35:31\n   Duration  1.73s (transform 124ms, setup 0ms, collect 104ms, tests 282ms, environment 775ms, prepare 165ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d1.test.ts (5 tests) 326ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  16:55:56\n   Duration  3.06s (transform 213ms, setup 0ms, collect 204ms, tests 326ms, environment 1.30s, prepare 224ms)\n\n"
       }
     },
     {
@@ -992,11 +992,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:35:36-06:00",
+        "at": "2026-11-15T16:56:03-06:00",
         "rc": 0,
-        "head": "c2f0909",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d2.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d2.test.ts (5 tests) 236ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  16:35:34\n   Duration  1.65s (transform 91ms, setup 0ms, collect 71ms, tests 236ms, environment 816ms, prepare 164ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d2.test.ts (5 tests) 237ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  16:56:01\n   Duration  2.37s (transform 149ms, setup 0ms, collect 78ms, tests 237ms, environment 825ms, prepare 303ms)\n\n"
       }
     },
     {
@@ -1021,11 +1021,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:35:38-06:00",
+        "at": "2026-11-15T16:56:07-06:00",
         "rc": 0,
-        "head": "c2f0909",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d3.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d3.test.ts (17 tests) 25ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  16:35:37\n   Duration  1.38s (transform 147ms, setup 0ms, collect 105ms, tests 25ms, environment 672ms, prepare 243ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d3.test.ts (17 tests) 25ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  16:56:05\n   Duration  1.88s (transform 109ms, setup 0ms, collect 110ms, tests 25ms, environment 667ms, prepare 106ms)\n\n"
       }
     },
     {
@@ -1050,11 +1050,11 @@
         "head": "600a157"
       },
       "evidence": {
-        "at": "2026-11-15T16:35:42-06:00",
+        "at": "2026-11-15T16:56:11-06:00",
         "rc": 0,
-        "head": "c2f0909",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d4.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d4.test.ts (2 tests) 15ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:35:40\n   Duration  1.79s (transform 124ms, setup 0ms, collect 100ms, tests 15ms, environment 836ms, prepare 198ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d4.test.ts (2 tests) 15ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:56:08\n   Duration  2.02s (transform 122ms, setup 0ms, collect 106ms, tests 15ms, environment 913ms, prepare 166ms)\n\n"
       }
     },
     {
@@ -1079,11 +1079,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:35:44-06:00",
+        "at": "2026-11-15T16:56:13-06:00",
         "rc": 0,
-        "head": "c2f0909",
+        "head": "365bbb8",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d5.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d5.test.ts (2 tests) 12ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:35:43\n   Duration  1.32s (transform 110ms, setup 0ms, collect 94ms, tests 12ms, environment 661ms, prepare 149ms)\n\n"
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d5.test.ts (2 tests) 14ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:56:12\n   Duration  1.32s (transform 100ms, setup 0ms, collect 97ms, tests 14ms, environment 687ms, prepare 112ms)\n\n"
       }
     },
     {
@@ -1109,11 +1109,11 @@
         "head": "144bb9f"
       },
       "evidence": {
-        "at": "2026-11-15T16:36:39-06:00",
+        "at": "2026-11-15T16:57:08-06:00",
         "rc": 0,
-        "head": "c2f0909",
+        "head": "365bbb8",
         "check": "frontend/e2e/check_items.sh D-6",
-        "tail": "ff2               14.06 kB\ndist/assets/outfit-latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-D0VpOlzy.css                                   44.54 kB \u2502 gzip:  19.81 kB\ndist/assets/index-CVDLyt1z.js                                   574.26 kB \u2502 gzip: 158.62 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.92s\nbuilt acc-hw-lane-d -> /tmp/hw-acc-dist.mYZN5g\n  .. close-message ok\n  .. never-open ok\n  .. mic-blocked ok\n  .. mic-enter ok\n"
+        "tail": "ff2               14.06 kB\ndist/assets/outfit-latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-RumHSjOy.css                                   44.58 kB \u2502 gzip:  19.82 kB\ndist/assets/index-8FZhNVoE.js                                   583.46 kB \u2502 gzip: 161.63 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 1.92s\nbuilt acc-hw-lane-d -> /tmp/hw-acc-dist.KAvsXv\n  .. close-message ok\n  .. never-open ok\n  .. mic-blocked ok\n  .. mic-enter ok\n"
       }
     }
   ],
