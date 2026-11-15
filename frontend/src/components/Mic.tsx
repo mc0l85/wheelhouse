@@ -12,8 +12,9 @@ import { api } from "../api/client";
 import type { Pane } from "../api/types";
 import { noBlur } from "./Keys";
 import { paneName } from "./PaneSelector";
+import { SUBMIT_MS, submitDictation } from "./micSubmit";
+import { makeMicApi } from "./micApi";
 
-const SUBMIT_MS = 10_000;
 
 interface Rec {
   lang: string; continuous: boolean; interimResults: boolean;
@@ -54,14 +55,14 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
   const [ph, setPh] = useState<Phase>({ k: "idle" });
   const [now, setNow] = useState(Date.now());
   const rec = useRef<Rec | null>(null);
-  const timer = useRef(0);
+  const abort = useRef<AbortController | null>(null);   // cancels the pending Enter
   const stopping = useRef(false);    // the user tapped stop (vs Safari ending on its own)
   const retry = useRef(0);           // pending restart timer between recognizers
   const wrapUpRef = useRef<(() => void) | null>(null);
   const phRef = useRef(ph);
   phRef.current = ph;
 
-  useEffect(() => () => { rec.current?.abort(); clearTimeout(timer.current); clearTimeout(retry.current); }, []);
+  useEffect(() => () => { rec.current?.abort(); abort.current?.abort(); clearTimeout(retry.current); }, []);
   useEffect(() => {
     if (ph.k !== "countdown") return;
     const t = setInterval(() => setNow(Date.now()), 100);
@@ -71,16 +72,21 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
   async function deliver(target: Pane, text: string) {
     text = text.trim();
     if (!text) { setPh({ k: "idle" }); flash("heard nothing", true); return; }
-    try { await api.sendText(target.pane_id, text); }
-    catch (e) { setPh({ k: "idle" }); flash(`send failed: ${(e as Error).message}`, true); return; }
-    const until = Date.now() + SUBMIT_MS;
-    setNow(Date.now());
-    setPh({ k: "countdown", target, text, until });
-    timer.current = window.setTimeout(async () => {
-      setPh({ k: "idle" });
-      try { await api.sendKeys(target.pane_id, ["Enter"]); flash(`sent → ${paneName(target)} ✓`); }
-      catch (e) { flash(`Enter failed: ${(e as Error).message}`, true); }
-    }, SUBMIT_MS);
+    const ctl = new AbortController();
+    abort.current = ctl;
+    const deps = {
+      now: () => Date.now(),
+      setTimer: (fn: () => void, ms: number) => window.setTimeout(fn, ms),
+      clearTimer: (id: number) => clearTimeout(id),
+      api: makeMicApi(flash),
+    };
+    const res = await submitDictation(deps, target.pane_id, text, {
+      signal: ctl.signal,
+      onCountdown: (until) => { setNow(Date.now()); setPh({ k: "countdown", target, text, until }); },
+    });
+    if (abort.current === ctl) abort.current = null;
+    setPh({ k: "idle" });
+    if (res.entered) flash(`sent → ${paneName(target)} ✓`);
   }
 
   async function start() {
@@ -185,7 +191,7 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
       else if (retry.current) { clearTimeout(retry.current); retry.current = 0; wrapUpRef.current?.(); }
     }
     else {
-      clearTimeout(timer.current);
+      abort.current?.abort();
       setPh({ k: "idle" });
       flash("auto-submit cancelled — text left in the box");
     }

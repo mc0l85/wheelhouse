@@ -6,6 +6,7 @@
 // whole screen; nothing is lost by reconnecting. Sockets die silently when
 // iOS suspends the PWA or a VPN re-keys, so a heartbeat detects zombies.
 import type { ConnInfo } from "../types/term";
+import { CONNECT_TIMEOUT_MS, onClose } from "./socketPolicy";
 
 export interface TerminalSocketOptions {
   /** Runs at the top of every connect (fit the terminal, remember dims). */
@@ -48,6 +49,8 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
   let pingTimer = 0;
   let pongDeadline = 0;
   let everOpened = false;
+  let failStreak = 0;       // consecutive sockets that closed without ever opening
+  let connectTimer = 0;
 
   const isOpen = () => !!ws && ws.readyState === WebSocket.OPEN;
 
@@ -66,20 +69,28 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
     ws = null;
     dead.onclose = null; dead.onmessage = null; dead.onopen = null;
     try { dead.close(); } catch { /* already gone */ }
-    clearInterval(pingTimer); clearTimeout(pongDeadline);
+    clearInterval(pingTimer); clearTimeout(pongDeadline); clearTimeout(connectTimer);
     if (!disposed) { opts.onLost(); scheduleReconnect(); }
   }
-  const scheduleReconnect = (delay?: number) => {
+  const scheduleReconnect = (delay?: number, message?: string) => {
     if (disposed) return;
     clearTimeout(retryTimer);
     const d = delay ?? Math.min(250 * 2 ** retry, 5000);
     retry++;
-    opts.onConn({ state: "reconnecting" });
+    opts.onConn(message ? { state: "reconnecting", message } : { state: "reconnecting" });
     retryTimer = window.setTimeout(connect, d);
   };
   const reconnectNow = () => {
     if (disposed) return;
     if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      retry = 0; scheduleReconnect(0);
+    } else if (ws.readyState === WebSocket.CONNECTING) {
+      // A handshake that may be stuck: replace it now rather than wait for it.
+      const pending = ws;
+      ws = null;
+      clearTimeout(connectTimer);
+      pending.onclose = null; pending.onmessage = null; pending.onopen = null;
+      try { pending.close(); } catch { /* already gone */ }
       retry = 0; scheduleReconnect(0);
     } else if (ws.readyState === WebSocket.OPEN) {
       sendPing(3000);   // back from background: prove the socket is alive, fast
@@ -95,7 +106,7 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
     // pageshow/online can schedule another; any older socket left open is a
     // second herdr client whose diffs interleave with this one's in the same
     // xterm (ghost text that never clears, SGR tails like "5;49m" as text).
-    clearTimeout(retryTimer);
+    clearTimeout(retryTimer); clearTimeout(connectTimer);
     if (ws) {
       const old = ws;
       old.onmessage = null; old.onopen = null; old.onclose = null;
@@ -104,6 +115,19 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
     const sock = new WebSocket(opts.url());
     ws = sock;
     sock.binaryType = "arraybuffer";
+    let opened = false;
+    // A handshake that never completes (dead route, stalled proxy) is abandoned
+    // and counted like a refused one.
+    connectTimer = window.setTimeout(() => {
+      if (ws !== sock || disposed) return;
+      ws = null;
+      sock.onclose = null; sock.onmessage = null; sock.onopen = null;
+      try { sock.close(); } catch { /* already gone */ }
+      failStreak++;
+      const dec = onClose(1006, "connect timeout", false, failStreak);
+      opts.onLost();
+      scheduleReconnect(dec.delayMs, dec.message);
+    }, CONNECT_TIMEOUT_MS);
     sock.onmessage = (ev) => {
       if (ws !== sock) return;                     // superseded socket
       if (typeof ev.data === "string") {          // server text frames are control only
@@ -115,6 +139,8 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
     };
     sock.onopen = () => {
       if (ws !== sock) return;
+      opened = true; failStreak = 0;
+      clearTimeout(connectTimer);
       opts.onReset(everOpened);
       if (everOpened) opts.onConn({ state: "restored" });
       everOpened = true;
@@ -124,13 +150,17 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
       clearInterval(pingTimer);
       pingTimer = window.setInterval(() => sendPing(), PING_MS);
     };
-    sock.onclose = () => {
+    sock.onclose = (ev) => {
       if (ws !== sock) return;                     // superseded socket
-      clearInterval(pingTimer); clearTimeout(pongDeadline);
+      clearInterval(pingTimer); clearTimeout(pongDeadline); clearTimeout(connectTimer);
       if (!disposed) {
+        if (!opened) failStreak++;
+        const dec = onClose(ev?.code ?? 1006, ev?.reason ?? "", opened, opened ? 0 : failStreak);
         // herdr's re-attach repaints everything; clear stale modes first.
         opts.onLost();
-        scheduleReconnect();
+        if (!dec.retry) { opts.onConn({ state: "reconnecting", message: dec.message }); return; }
+        // Keep the existing quick first retry after an ordinary drop.
+        scheduleReconnect(opened && !dec.message ? undefined : dec.delayMs, dec.message);
       }
     };
   }
@@ -153,7 +183,7 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
     abandon,
     dispose: () => {
       disposed = true;
-      clearTimeout(retryTimer); clearInterval(pingTimer); clearTimeout(pongDeadline);
+      clearTimeout(retryTimer); clearInterval(pingTimer); clearTimeout(pongDeadline); clearTimeout(connectTimer);
       ws?.close();
     },
   };

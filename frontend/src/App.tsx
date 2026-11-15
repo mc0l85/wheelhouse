@@ -35,6 +35,7 @@ export default function App() {
   const [pinned, setPinnedState] = useState(loadPin);
   const [toast, setToast] = useState<Toast | null>(null);
   const [conn, setConn] = useState<ConnState>("connecting");
+  const [connMsg, setConnMsg] = useState("");
   const [scroll, setScroll] = useState<Record<string, PaneScroll>>({});
   const [badgePulse, setBadgePulse] = useState(false);
   const toastTimer = useRef(0);
@@ -49,6 +50,7 @@ export default function App() {
   const interactive = !!health?.writes_enabled;
   const onConn = useCallback((info: ConnInfo) => {
     const s = info.state;
+    setConnMsg(info.message ?? "");
     if (s === "restored") { flash("reconnected ✓"); setConn("open"); } else setConn(s);
   }, [flash]);
   const onPasteImage = useCallback((img: Blob) => {
@@ -255,7 +257,7 @@ export default function App() {
           <button {...noBlur} className="bar-chip scroll-chip" title="scrolled back — tap to return to the bottom"
             onClick={toBottom}>↓ {scrolledUp} up</button>
         )}
-        {conn !== "open" && <span className="bar-ind conn" title="reconnecting to herdr">⟳ {conn}</span>}
+        {conn !== "open" && <span className="bar-ind conn" title="reconnecting to herdr">⟳ {conn}{connMsg ? ` — ${connMsg}` : ""}</span>}
         {health && !interactive && <span className="bar-ind" title="read-only">🔒</span>}
         {(mods.ctrl || mods.alt) && (
           <button {...noBlur} className="kb on mod-ind" title="modifier armed — tap to release"
