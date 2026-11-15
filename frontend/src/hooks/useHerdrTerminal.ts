@@ -388,11 +388,15 @@ export function useHerdrTerminal(
     ta?.addEventListener("compositionupdate", onCompUpdate);
     ta?.addEventListener("compositionend", onCompEnd);
     term.attachCustomKeyEventHandler((e) => {
-      if (e.type !== "keydown") return true;
+      const shiftEnter = (e.code === "Enter" || e.code === "NumpadEnter") && e.shiftKey && !e.altKey && !e.metaKey;
+      // xterm runs this for keypress too: Shift+Enter's keypress would add a bare CR.
+      if (e.type !== "keydown") return !shiftEnter;
       const cmd = e.metaKey, ctrl = e.ctrlKey, shift = e.shiftKey;
-      // Ctrl+Shift+Enter → insert a newline (ESC+CR = meta/Option-Enter, which
-      // Claude Code and most TUIs treat as newline rather than submit).
-      if (e.code === "Enter" && ctrl && shift) { raw("\x1b\r"); return false; }
+      // Shift+Enter and Ctrl+Shift+Enter → insert a newline (ESC+CR = meta/
+      // Option-Enter, which Claude Code, agy and most TUIs treat as newline
+      // rather than submit). xterm.js sends a bare CR for Shift+Enter, so
+      // without this agy submitted half-typed multi-line prompts.
+      if (shiftEnter) { raw("\x1b\r"); return false; }
       if (e.code === "KeyC" && (cmd || (ctrl && shift) || ctrl)) {
         if (cmd || (ctrl && shift)) { copySelection(); return false; }
         if (ctrl && term.hasSelection()) { copySelection(); term.clearSelection(); return false; }
