@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Build and install herdr web for the current user (no root needed).
+# Build and install herdr + herdr web as system units (uses sudo to install them).
 #
-#   deploy/install.sh            build + install + start the user service
+#   deploy/install.sh            build + install the system units + start them
 #   deploy/install.sh --build    build only (backend venv + frontend bundle)
 #
 # Needs: herdr >= 0.8 on PATH, python3 >= 3.10 with venv, node >= 18 + npm.
@@ -9,7 +9,11 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONF_DIR="$HOME/.config/herdr-web"
-UNIT_DIR="$HOME/.config/systemd/user"
+UNIT_DIR="/etc/systemd/system"
+SERVICE_USER="${SERVICE_USER:-$(id -un)}"
+SERVICE_GROUP="${SERVICE_GROUP:-$(id -gn)}"
+SERVICE_HOME="$(getent passwd "$SERVICE_USER" | cut -d: -f6)"
+SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO="sudo"
 
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
 need() { command -v "$1" >/dev/null || { echo "missing: $1 ($2)"; exit 1; }; }
@@ -36,21 +40,27 @@ mkdir -p "$CONF_DIR"
 if [ ! -f "$CONF_DIR/env" ]; then
   cp "$APP_DIR/backend/.env.example" "$CONF_DIR/env"
   echo "    created with safe defaults (127.0.0.1, read-only) — edit it, then:"
-  echo "    systemctl --user restart herdr-web"
+  echo "    sudo systemctl restart herdr-web"
 fi
 
-say "service: $UNIT_DIR/herdr-web.service"
-mkdir -p "$UNIT_DIR"
-case "$APP_DIR" in *[[:space:]\|\&]*) echo "install path must not contain spaces, | or &: $APP_DIR"; exit 1;; esac
-sed "s|@APP_DIR@|$APP_DIR|g" "$APP_DIR/deploy/herdr-web.service" > "$UNIT_DIR/herdr-web.service"
-systemctl --user daemon-reload
-systemctl --user enable herdr-web
-systemctl --user restart herdr-web
+case "$APP_DIR$CONF_DIR" in *[[:space:]\|\&]*) echo "install paths must not contain spaces, | or &"; exit 1;; esac
+HERDR_BIN="$(command -v herdr || echo "$HOME/.local/bin/herdr")"
+render() {
+  sed -e "s|@APP_DIR@|$APP_DIR|g" -e "s|@CONF_DIR@|$CONF_DIR|g" -e "s|@HERDR_BIN@|$HERDR_BIN|g" \
+      -e "s|@SERVICE_USER@|$SERVICE_USER|g" -e "s|@SERVICE_GROUP@|$SERVICE_GROUP|g" \
+      -e "s|@SERVICE_HOME@|$SERVICE_HOME|g" "$APP_DIR/deploy/$1" | $SUDO tee "$UNIT_DIR/$1" >/dev/null
+}
+say "services: $UNIT_DIR/herdr.service, $UNIT_DIR/herdr-web.service"
+render herdr.service
+render herdr-web.service
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable herdr.service herdr-web.service
+$SUDO systemctl restart herdr-web.service
+$SUDO systemctl start herdr.service
 sleep 2
-systemctl --user is-active --quiet herdr-web ||
-  { echo "service failed to start:"; journalctl --user -u herdr-web -n 20 --no-pager; exit 1; }
+systemctl is-active --quiet herdr-web.service ||
+  { echo "service failed to start:"; journalctl -u herdr-web.service -n 20 --no-pager; exit 1; }
 
 set -a; . "$CONF_DIR/env"; set +a
 say "running on http://${HERDRWEB_HOST}:${HERDRWEB_PORT}"
-echo "    keep it running after logout:  loginctl enable-linger \"$USER\""
 echo "    phone access + TLS + push:     docs/NETWORKING.md (add your host name to HERDRWEB_ALLOWED_HOSTS)"

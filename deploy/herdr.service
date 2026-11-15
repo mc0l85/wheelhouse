@@ -1,0 +1,32 @@
+# System unit for the herdr server, installed by deploy/install.sh as
+# /etc/systemd/system/herdr.service (@HERDR_BIN@, @SERVICE_USER@, @SERVICE_GROUP@,
+# @SERVICE_HOME@ are filled in). herdr-web wants this unit but never requires it,
+# so restarting either one leaves the other running.
+[Unit]
+Description=herdr server (terminal workspace)
+After=network.target
+
+[Service]
+Type=simple
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+# Explicit, clean environment: nothing inherited from a login shell, nothing HERDRWEB_*.
+Environment=HOME=@SERVICE_HOME@
+Environment=PATH=@SERVICE_HOME@/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=SHELL=/bin/bash
+Environment=LANG=C
+Environment=LC_CTYPE=C.UTF-8
+WorkingDirectory=@SERVICE_HOME@
+ExecStart=@HERDR_BIN@ server
+Restart=always
+RestartSec=2
+# Stop the server, then whatever it spawned; panes' processes get SIGTERM at stop.
+KillMode=mixed
+TimeoutStopSec=15
+# Pane processes may be OOM-killed individually without taking the unit down.
+OOMPolicy=continue
+# Every pane is a process tree: no task limit.
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target

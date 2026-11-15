@@ -100,7 +100,7 @@ class Hub:
     async def _session(self) -> None:
         panes = (await asyncio.to_thread(herdr._socket_request, "pane.list", {}) or {}).get("panes", [])
         self.note_statuses(panes)
-        notifier.seed(panes)
+        notifier.reconcile(panes)
         subscribed = {p["pane_id"] for p in panes}
         subs = [{"type": t} for t in _GLOBAL]
         for p in panes:

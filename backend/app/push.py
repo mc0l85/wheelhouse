@@ -202,14 +202,26 @@ def _describe(pane_id: str) -> tuple[bool, str, int]:
 
 
 class Notifier:
-    """Fed by the event hub: one push per pane per blocked episode."""
+    """Fed by the event hub: one push per pane per blocked episode.
+
+    `notified` = panes already announced for the current episode; `pending` =
+    panes with a confirm in flight (at most one per pane).
+    """
 
     def __init__(self) -> None:
         self.notified: set[str] = set()
+        self.pending: dict[str, asyncio.Task] = {}
 
-    def seed(self, panes: list[dict]) -> None:
-        # Already blocked when the stream (re)starts: never announce those.
-        self.notified |= {p["pane_id"] for p in panes if p.get("agent_status") == "blocked"}
+    def reconcile(self, panes: list[dict]) -> None:
+        """Run on every (re)subscribe with a fresh pane.list: a pane that went
+        blocked while the stream was down produced no event, so treat each
+        blocked pane as a status event; forget panes that are gone or not blocked."""
+        live = {p.get("pane_id") for p in panes}
+        self.notified &= live
+        for p in panes:
+            pid = p.get("pane_id")
+            if pid:
+                self.on_status(pid, p.get("agent_status"))
 
     def on_status(self, pane_id: str | None, status: str | None) -> None:
         if not pane_id:
@@ -217,25 +229,28 @@ class Notifier:
         if status != "blocked":
             self.notified.discard(pane_id)
             return
-        if pane_id in self.notified or not count():
+        if pane_id in self.notified or pane_id in self.pending or not count():
             return
-        self.notified.add(pane_id)
-        asyncio.get_running_loop().create_task(self._confirm_and_send(pane_id))
+        self.pending[pane_id] = asyncio.get_running_loop().create_task(self._confirm_and_send(pane_id))
 
     async def _confirm_and_send(self, pane_id: str) -> None:
-        await asyncio.sleep(CONFIRM_DELAY_S)
         try:
-            still, label, n = await asyncio.to_thread(_describe, pane_id)
-        except Exception as e:
-            log.warning("push: could not re-read %s: %s", pane_id, e)
-            return
-        if not still:
-            self.notified.discard(pane_id)
-            return
-        body = "An agent is waiting for you" if settings.push_private else f"{label} needs you"
-        payload = {"title": "Agent blocked", "body": body, "pane_id": pane_id, "blocked": n}
-        r = await asyncio.to_thread(send_all, payload)
-        log.info("push for %s: %s", pane_id, r)
+            await asyncio.sleep(CONFIRM_DELAY_S)
+            try:
+                still, label, n = await asyncio.to_thread(_describe, pane_id)
+            except Exception as e:
+                log.warning("push: could not re-read %s: %s", pane_id, e)
+                return
+            if not still:
+                self.notified.discard(pane_id)
+                return
+            self.notified.add(pane_id)
+            body = "An agent is waiting for you" if settings.push_private else f"{label} needs you"
+            payload = {"title": "Agent blocked", "body": body, "pane_id": pane_id, "blocked": n}
+            r = await asyncio.to_thread(send_all, payload)
+            log.info("push for %s: %s", pane_id, r)
+        finally:
+            self.pending.pop(pane_id, None)
 
 
 notifier = Notifier()
