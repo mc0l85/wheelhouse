@@ -89,3 +89,9 @@ herdr server or the panes it holds. Push de-duplication state (`notified.json`
 under the state directory) survives a web restart, so panes that were already
 announced and are still blocked are not pushed again. See
 [NETWORKING.md](NETWORKING.md#running-as-system-services).
+
+The terminal route probes the herdr server's socket before it spawns a client and closes
+with 4503 when the server is down, so a browser reconnect can never start a herdr server
+inside the web unit's own control group. A host that still runs the server inside a legacy
+web unit is moved to this layout once by `deploy/cutover.sh` (a dry run first with
+`--dry-run`; `--rollback` undoes it); `deploy/stage.sh` builds the tree it deploys.

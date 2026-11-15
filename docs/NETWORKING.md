@@ -27,9 +27,11 @@ Whatever you choose, add the host name (or address) your phone will type to
 HERDRWEB_ALLOWED_HOSTS=localhost,127.0.0.1,wheelhouse.example.com
 ```
 
-Entries are matched against the Host header **without its port**: `wheelhouse.example.com`
-also allows `wheelhouse.example.com:8443`. Bracketed IPv6 (`[::1]`, `[::1]:8086`) is
-understood, and `*.example.com` allows any subdomain.
+The default is `localhost,127.0.0.1,::1`. Entries are matched against the Host header
+**without its port** (matching without the port): `wheelhouse.example.com` also allows
+`wheelhouse.example.com:8443`. Bracketed IPv6 (`[::1]`, `[::1]:8086`) is understood,
+and `*.example.com` allows any subdomain. A lone `*` disables the check and allows any
+host, so do not use it on a reachable machine.
 
 ## A1. Tailscale (simplest)
 

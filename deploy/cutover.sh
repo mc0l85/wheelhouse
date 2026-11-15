@@ -27,54 +27,10 @@
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-HOST_ENV="" DRY_RUN=0 FORCE=0 ROLLBACK=0 FOREGROUND=0 COORDINATOR="${HERDR_PANE_ID:-}"
-ARGS=("$@")
-
-usage() { sed -n '2,24p' "$0" >&2; exit 2; }
-todo() { echo "cutover.sh: todo: $*" >&2; exit 1; }
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --host-env) HOST_ENV=${2:-}; shift 2 || usage;;
-    --dry-run) DRY_RUN=1; shift;;
-    --force) FORCE=1; shift;;
-    --rollback) ROLLBACK=1; shift;;
-    --foreground) FOREGROUND=1; shift;;
-    --coordinator) COORDINATOR=${2:-}; shift 2 || usage;;
-    -h|--help) usage;;
-    *) echo "cutover.sh: unknown argument: $1" >&2; usage;;
-  esac
+SELF="$HERE/$(basename "$0")"
+for a in "$@"; do
+  case "$a" in -h|--help) sed -n '2,24p' "$0"; exit 0;; esac
 done
-[ -n "$HOST_ENV" ] || usage
-
-load_host_env() { todo "load_host_env: parse $HOST_ENV (KEY=VALUE, no expansion), check required keys"; }
-preflight()     { todo "preflight: stage tree + REVISION, CONF_DIR/env keys, units, HERDR_BIN; exit 2 on failure"; }
-detach()        { todo "detach: systemd-run --unit=herdr-cutover ... ${ARGS[*]} --foreground"; }
-step1_manifest()  { todo "step 1: manifest (copies, pane list, agent list, process-info, /proc cmdline)"; }
-step2_idle_gate() { todo "step 2: idle gate (blocked -> abort; working -> wait <= IDLE_WAIT_S; --force)"; }
-step3_quit()      { todo "step 3: send-keys ctrl+c ctrl+c per agent, coordinator last; SIGTERM fallback"; }
-step4_stop_web()  { todo "step 4: stop OLD_WEB_UNIT; no herdr server, socket refuses; session.json check"; }
-step5_deploy()    { todo "step 5: deploy staged tree; render + start WEB_UNIT; retire OLD_WEB_UNIT; prove guard"; }
-step6_herdr()     { todo "step 6: render HERDR_UNIT; install herdr-update.sh; start; socket, MainPID, panes"; }
-step7_relaunch()  { todo "step 7: relaunch per manifest row (claude --resume / pi --session / fresh)"; }
-step8_resume()    { todo "step 8: wait idle, send resume + Enter; blocked -> skip; coordinator last"; }
-step9_verify()    { todo "step 9: result.json, restart WEB_UNIT once, notify"; }
-rollback()        { todo "rollback: stop units, restore old tree / old unit / old update script, start old unit"; }
-
-main() {
-  load_host_env
-  if [ "$ROLLBACK" = 1 ]; then rollback; return; fi
-  preflight
-  if [ "$DRY_RUN" = 0 ] && [ "$FOREGROUND" = 0 ]; then detach; return; fi
-  step1_manifest
-  [ "$DRY_RUN" = 1 ] && return
-  step2_idle_gate
-  step3_quit
-  step4_stop_web
-  step5_deploy
-  step6_herdr
-  step7_relaunch
-  step8_resume
-  step9_verify
-}
-main
+command -v python3 >/dev/null || { echo "cutover.sh: python3 is required" >&2; exit 2; }
+# All logic lives in cutover_lib.py (stdlib only); this launcher only locates it.
+exec python3 "$HERE/cutover_lib.py" --self "$SELF" "$@"

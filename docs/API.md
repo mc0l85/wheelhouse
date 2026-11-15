@@ -2,18 +2,45 @@
 
 Base path `/api`. There is no authentication (see docs/NETWORKING.md). Mutating
 calls and WebSocket handshakes that carry a browser `Origin` header must be
-same-origin, or the server answers **403** (WebSocket: closed before accept).
+same-origin, or the server answers **403** (a WebSocket is accepted first and then
+closed with 1008, see below).
 Requests for a host not in `HERDRWEB_ALLOWED_HOSTS` get **400**. Writes (and the
 test push) return **403** unless `HERDRWEB_ENABLE_WRITES=1`. A malformed pane ID
 or option-like key returns **400**. herdr failures return **502**.
-Interactive docs: `/docs` (OpenAPI).
+`/docs`, `/redoc` and `/openapi.json` are disabled (404).
 
 ## WebSockets
 
 | Path | Purpose |
 |---|---|
-| `/api/ws/terminal?rows=&cols=` | A real herdr client in a PTY. Server → client: binary PTY bytes. Client → server: binary or text keystrokes (writes only); JSON `{"type":"resize","rows","cols"}`, `{"type":"ping"}` (→ `{"type":"pong"}`), `{"type":"input","data"}`. |
+| `/api/ws/terminal?rows=&cols=` | A real herdr client in a PTY. Server → client: binary PTY bytes. Client → server: binary or text keystrokes (writes only), plus the JSON text frames below. |
 | `/api/ws/events` | herdr's event stream: `{"type":"stream","up":bool}`, then `{"type":"event","event","pane_id",…}` frames (agent status, scroll, structure). |
+
+Client → server frames on the terminal socket:
+
+- `{"type":"resize","rows","cols"}` resizes the PTY.
+- `{"type":"ping"}` is answered with `{"type":"pong"}` (the client heartbeat).
+- `{"type":"input","data"}` types `data` into the pane (writes only).
+- Any other JSON `type` is dropped, and a text frame that is not a JSON object with a
+  `type` is plain keystroke text (writes only).
+- Binary frames are forwarded verbatim to the PTY (writes only), so pasting JSON works.
+
+### Terminal close codes
+
+The server accepts the WebSocket first and then closes it, so the code and reason
+reach the browser (an early HTTP 403 would carry no reason). Every refusal below is a
+close after accept.
+
+| Code | Reason text | Meaning |
+|---|---|---|
+| 1008 | `origin not allowed` | The handshake's `Origin` is not same-origin or in `HERDRWEB_ALLOWED_ORIGINS`. |
+| 1012 | `herdr client exited` | The herdr client in the PTY exited, or the output was backed up when it did. Reconnect. |
+| 1013 | `terminal limit reached` | `HERDRWEB_MAX_TERMINALS` terminals are already open. Try again later. |
+| 1013 | `output backlog` | The browser did not keep up and more than 8 MiB of output was queued. Reconnect; herdr repaints. |
+| 4500 | `herdr binary missing` | The herdr binary was not found. No client is spawned. |
+| 4503 | `herdr server not running` | The herdr server is down (no socket, or a stale one). No client is spawned, so nothing can start a second server inside the web unit. |
+| 4503 | `herdr server not responding` | The socket accepts but the server never answers within the probe timeout. |
+| 1011 | `could not start herdr client` | The PTY could not be created. |
 
 ## Read
 
