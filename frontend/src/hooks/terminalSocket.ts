@@ -172,6 +172,9 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
         const dec = onClose(ev?.code ?? 1006, ev?.reason ?? "", established, established ? 0 : failStreak);
         // herdr's re-attach repaints everything; clear stale modes first.
         opts.onLost();
+        // 1013 on an established socket is the server shedding a slow reader
+        // (output backlog), not a refusal: reconnect quickly, no error banner.
+        if (established && (ev?.code ?? 0) === 1013) { scheduleReconnect(250); return; }
         scheduleReconnect(dec.delayMs, dec.message);
       }
     };
