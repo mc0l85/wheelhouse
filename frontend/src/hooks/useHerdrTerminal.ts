@@ -224,14 +224,6 @@ export function useHerdrTerminal(
       if (TRACE) trace("beforeinput", { inputType: e.inputType, data: e.data, composing: e.isComposing });
       if (!ta || e.isComposing) return;
       const t = taSnap();
-      // A collapsed caret with an autocorrect / suggestion tap: the browser says which span it replaces.
-      if (t.selStart === t.selEnd && (e.inputType === "insertReplacementText" || e.inputType === "insertText")) {
-        const r = typeof e.getTargetRanges === "function" ? e.getTargetRanges()[0] : undefined;
-        if (r && r.startContainer === r.endContainer && r.endOffset > r.startOffset && r.endOffset <= t.value.length
-            && (r.startContainer === ta || r.startContainer.parentNode === ta)) {
-          t.selStart = r.startOffset; t.selEnd = r.endOffset;
-        }
-      }
       dispatch({ type: "beforeinput", now: performance.now(), inputType: e.inputType, data: e.data, ta: t, mods: snap() });
     };
     const onInput = (e: Event) => {
@@ -261,6 +253,7 @@ export function useHerdrTerminal(
     // data) is produced after this flag is set, and the flag drops once the event has finished.
     let keyClear = 0;
     const markKey = (e: KeyboardEvent) => {
+      if (e.type === "keyup") return;   // a keyup must not re-arm the flag: xterm's commit timer may fire after it
       if (e.type === "keydown") { keydownNow = true; keydownDataSeen = false; } else keydownNow = true;
       if (!composing && e.keyCode !== 229) commitUntil = 0;   // a real key: no commit is pending any more
       clearTimeout(keyClear);
@@ -268,11 +261,15 @@ export function useHerdrTerminal(
     };
     // Focus / mouse reports xterm generates are never modified.
     const REPORT_RE = /^\x1b\[(?:[IO]|<\d+;\d+;\d+[Mm]|M[\s\S]{3})/;
+    const onBlur = () => {
+      composing = false;
+      dispatch({ type: "blur", now: performance.now() });
+    };
     const onKeystroke = (d: string) => {
       if (TRACE) trace("onData", { data: d.length > 80 ? d.slice(0, 80) + "…" : d });
       const now = performance.now();
       let origin: DataOrigin = "other";
-      if (composing && keydownNow && !keydownDataSeen) origin = "keydownFinalize";
+      if (composing && (cs.comp !== null || cs.abandoned === "live") && keydownNow && !keydownDataSeen) origin = "keydownFinalize";
       else if (!keydownNow && !pasting && now < commitUntil) { origin = "commit"; commitUntil = 0; }
       if (keydownNow) keydownDataSeen = true;
       const source: ModSource = pasting ? "paste" : REPORT_RE.test(d) ? "report" : "key";
@@ -431,6 +428,7 @@ export function useHerdrTerminal(
     ta?.addEventListener("compositionstart", onCompStart);
     ta?.addEventListener("compositionupdate", onCompUpdate);
     ta?.addEventListener("compositionend", onCompEnd);
+    ta?.addEventListener("blur", onBlur);
     term.attachCustomKeyEventHandler((e) => {
       markKey(e);
       const shiftEnter = (e.code === "Enter" || e.code === "NumpadEnter") && e.shiftKey && !e.altKey && !e.metaKey;
@@ -585,6 +583,7 @@ export function useHerdrTerminal(
       ta?.removeEventListener("compositionstart", onCompStart);
       ta?.removeEventListener("compositionupdate", onCompUpdate);
       ta?.removeEventListener("compositionend", onCompEnd);
+      ta?.removeEventListener("blur", onBlur);
       oscSub.dispose();
       host.removeEventListener("mouseup", onMouseUp);
       host.removeEventListener("paste", onPaste, true);

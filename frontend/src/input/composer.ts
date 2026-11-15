@@ -23,7 +23,8 @@ export type ComposerEvent =
   | { type: "onData"; now: number; data: string; origin: DataOrigin }
   | { type: "timeout"; now: number; id: string }
   | { type: "sendFailed"; now: number }
-  | { type: "reset"; now: number };
+  | { type: "reset"; now: number }
+  | { type: "blur"; now: number };
 
 export type ComposerEffect =
   | { type: "setTimer"; id: string; ms: number }
@@ -83,6 +84,7 @@ export function initialComposerState(): ComposerState {
 const COMMIT_TIMER = "commit";
 const COMMIT_WAIT_MS = 150;
 const SUPPRESS_TIMER = "suppress";
+const ABANDON_TIMER = "abandon";
 const SUPPRESS_MS = 500;
 
 type Segmenter = { segment: (s: string) => Iterable<{ segment: string }> };
@@ -169,6 +171,7 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       let send = "";
       if (s.timerArmed) { const r = finishComp(s, event.now, false, effects); s = r.state; send = r.send; }
       if (s.suppress !== null) effects.push({ type: "cancelTimer", id: SUPPRESS_TIMER });
+      if (s.abandoned) effects.push({ type: "cancelTimer", id: ABANDON_TIMER });
       return done({
         ...s, comp: tailSel(event.ta), lead: null, adopt: null, suppress: null, replPending: null,
         ctrl: event.mods.ctrl, alt: event.mods.alt, startLen: event.ta.value.length,
@@ -199,7 +202,11 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
     }
 
     case "compositionend": {
-      if (s.abandoned) return done({ ...s, abandoned: "ended" });
+      if (s.abandoned) {
+        // xterm's commit for it may follow; stop expecting one when the commit window is over.
+        effects.push({ type: "setTimer", id: ABANDON_TIMER, ms: DUP_WINDOW_MS });
+        return done({ ...s, abandoned: "ended" });
+      }
       let send = "";
       if (s.adopt) { const r = resolveAdopt(s, effects); s = r.state; send = r.send; }
       if (s.comp === null) return done({ ...s, inComp: false }, send);   // already finalized (keydown) or reset: nothing to settle
@@ -250,11 +257,7 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
         const { before, s0, e0 } = s.replPending;
         const v = event.ta.value;
         if (s0 >= e0) {
-          let p = 0;
-          while (p < before.length && p < v.length && before[p] === v[p]) p++;
-          let q = 0;
-          while (q < before.length - p && q < v.length - p && before[before.length - 1 - q] === v[v.length - 1 - q]) q++;
-          if (q === 0) send += diff(before, v);                 // changed text runs to the end: a tail replacement
+          if (s0 === before.length) send += diff(before, v);    // caret was at the end: a tail replacement
           else {
             effects.push({ type: "toast", msg: "edit not sent: autocorrect changed earlier text" });
             s = { ...s, clearOnInput: true };
@@ -300,7 +303,15 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
         return done(r.state, r.send);
       }
       if (event.id === SUPPRESS_TIMER) return done({ ...s, suppress: null });
+      if (event.id === ABANDON_TIMER) return done({ ...s, abandoned: s.abandoned === "ended" ? null : s.abandoned });
       return done(s);
+    }
+
+    case "blur": {
+      // The textarea lost focus: a composition whose end we never saw is over; the pane keeps its bytes.
+      // (An ended composition waiting for xterm's commit is left alone.)
+      if (s.timerArmed) return done(s);
+      return done({ ...s, comp: null, lead: null, adopt: null, inComp: false, abandoned: s.abandoned === "live" ? null : s.abandoned });
     }
 
     case "sendFailed":
@@ -310,6 +321,9 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       // reset: a composition in progress (or just ended, commit pending) is abandoned.
       const abandoned = event.type === "reset" && (s.inComp || s.comp !== null || s.timerArmed || s.adopt !== null)
         ? (s.timerArmed ? "ended" : "live") : null;
+      // sendFailed outside a composition: the textarea's tail no longer matches the pane, so a later
+      // selected-tail replacement must not erase text that never arrived.
+      if (event.type === "sendFailed" && !s.inComp) effects.push({ type: "clearTextarea" });
       return done({ ...initialComposerState(), startLen: s.startLen, abandoned,
         inComp: event.type === "sendFailed" && s.inComp });
     }
