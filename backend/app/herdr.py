@@ -24,6 +24,7 @@ import re
 import shlex
 import socket
 import subprocess
+import time
 from typing import Any
 
 from .config import settings
@@ -219,6 +220,33 @@ def _socket_request(method: str, params: dict) -> Any:
     if "error" in env:
         raise HerdrError(str(env["error"]))
     return env.get("result")
+
+
+def server_alive(timeout: float) -> bool:
+    """Bounded probe of herdr's control socket: True when something answers a request with a
+    newline-terminated JSON reply (a result or an error both count). No socket file, a stale
+    socket, or a listener that never replies all return False within about `timeout` seconds."""
+    deadline = time.monotonic() + max(0.05, timeout)
+    req = (json.dumps({"id": "web:probe", "method": "ping", "params": {}}) + "\n").encode()
+    buf = b""
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.settimeout(max(0.05, timeout))
+            s.connect(socket_path())
+            s.sendall(req)
+            while b"\n" not in buf:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    return False
+                s.settimeout(left)
+                chunk = s.recv(65536)
+                if not chunk:
+                    return False
+                buf += chunk
+        json.loads(buf.split(b"\n", 1)[0])
+        return True
+    except (OSError, ValueError):
+        return False
 
 
 # ---------------------------------------------------------------------------
