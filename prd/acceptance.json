@@ -63,9 +63,9 @@
       "timeout": 300,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:44:23-06:00",
+        "at": "2026-11-15T16:21:53-06:00",
         "rc": 1,
-        "head": "15f23d7"
+        "head": "ab68095"
       }
     },
     {
@@ -148,9 +148,9 @@
       "timeout": 400,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:44:30-06:00",
+        "at": "2026-11-15T16:21:55-06:00",
         "rc": 1,
-        "head": "15f23d7"
+        "head": "ab68095"
       }
     },
     {
@@ -893,13 +893,13 @@
   ],
   "lock": {
     "backend/tests/acceptance/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "backend/tests/acceptance/conftest.py": "cec89334cf1d8f88a7d7a278e84d755699924b42633f01b4a3b8c542e3fc6e15",
+    "backend/tests/acceptance/conftest.py": "52e85172c5c987382e338ba48da5188d7040755c4e2466e77c17b5d6c37a3408",
     "backend/tests/acceptance/pushkit.py": "ae3fe883332d234a8b783afaef9a16d97452206a38ec3421cfc4a7106244cf33",
     "backend/tests/acceptance/test_a1.py": "15b4e13884196ca5adaca545ccc88e8627d81f487d2463a635a6a78e49056ab3",
-    "backend/tests/acceptance/test_a2.py": "fc6a1711bc3d648d4ffd062ae9c6d9e40bae47341e1d054ac7fe16e0c10aa1d7",
+    "backend/tests/acceptance/test_a2.py": "7d53d3135ec5e85affecc034d40ab68716d87af3cbc1f4481689cad60c0bd343",
     "backend/tests/acceptance/test_a3.py": "956b72c14a1ff4ec865e17fefce38f6ded58133aaca1a6053a779f97b4852883",
     "backend/tests/acceptance/test_a4.py": "ba247b8c5d27bb4fff2fc873b4bcba6576c607c51c456daddaa741da4c639f72",
-    "backend/tests/acceptance/test_a5.py": "721afd703c52d7599337005c206e10e19f6d06a89c2964ccea33e80d489e900a",
+    "backend/tests/acceptance/test_a5.py": "ca9b99e55cd99a178012548a967a21a9c415f7642f38e8ebf70f7856a3ebb8c2",
     "backend/tests/acceptance/test_a6.py": "edcdfd37bb7ea1bd1cab773b2ba9d08e6eecb394658a59eea3b4a4749d9bb053",
     "backend/tests/acceptance/test_a7.py": "c6568aee8934718c3d8d7a75d740c489d714ea363b1359b80349d7355e2d78ab",
     "backend/tests/acceptance/test_b1.py": "5c486c08b323807959b263be0f70e63c0a27e2d179c6dfffdc8f313636ba96a9",
@@ -913,7 +913,7 @@
     "backend/tests/fakes/fake_herdr_api.py": "c3536da989dae978d1390e5ff2db0f28952d978bbd554732ff68de4413166de8",
     "backend/tests/fakes/herdr_echo.py": "113758c85797e10274356d018694a821a5083dec0aa51095aef29d7d7be130dd",
     "backend/tests/fakes/herdr_exit.py": "0f1b4fcb3f5b4c9c4a512cbc9957d95b43b0581feca2fbdd64153eb48eff42a9",
-    "backend/tests/fakes/herdr_flood.py": "f7a459ec4e454530a3875ad7e259af4fe5912f3935426e2af8d3cac940b6aa5c",
+    "backend/tests/fakes/herdr_flood.py": "c5f4c6f0e6c2143e000942a0f8a0df6d049ae80715c577ecfbb4611be2d12089",
     "backend/tests/fakes/herdr_marker.py": "883ed8f04e088d78dca5d140c058f7b013b57c94efb0fc28d6a916acfedd17f1",
     "backend/tests/fakes/herdr_record.py": "435648e21bb7c79201c3011ac048de157eb17fcd043fa25853d7f328d21ada9e",
     "backend/tests/make_test_venv.sh": "dd4c914eaa2cf4051a5cfc5184c560478441ec3e7469791a5c36dda79e044f61",
@@ -945,5 +945,5 @@
     "frontend/test/acceptance/helpers/mic.ts": "e1d6977b6ec28eaf4fc36f7e4714820bc6977fbeb30cbf4672943da77f40ed4a",
     "frontend/vitest.config.ts": "0f8e27f84bcbad6fa87a5d452533498974f1623b8d92e6e6bc329370e9904034"
   },
-  "locked_at": "2026-11-15T15:36:35-06:00"
+  "locked_at": "2026-11-15T16:21:49-06:00"
 }
