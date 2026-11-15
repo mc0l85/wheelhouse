@@ -288,6 +288,7 @@ late-Enter skip toast (lock the phone during the countdown).
 | Hook split regresses typing | medium | behaviour-neutral split gated by H0-3 | H0-3, C-15, V-1 |
 | Grapheme vs code-point backspace mismatch | medium | P0-4 decides; smaller count | C-13, V-1 |
 | A pane can still poison the clipboard for pastes outside the terminal | accepted | Decision 4 | — |
+| herdr server dies between the probe and the client attach, so the attach auto-starts a server in the web cgroup (herdr 0.9.5 has no attach-only flag) | low (window ≈ probe→exec, server under `Restart=always`) | accepted; E-2 cgroup check catches it after the fact | E-2 |
 
 ## 8. Decisions
 
