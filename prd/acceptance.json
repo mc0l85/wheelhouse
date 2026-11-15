@@ -1,0 +1,862 @@
+{
+  "prd": "docs/PRD.md",
+  "notes": [
+    "Pinned interfaces beyond the PRD text: app.routers.terminal.OUT_Q_MAX_BYTES (module int, read at call time); app.herdr.server_alive(timeout) -> bool (any newline-terminated JSON reply = alive); settings.probe_timeout; terminal._spawn(session, rows, cols) -> (pid, fd) forks unconditionally (the binary check lives in the route).",
+    "Skeleton change: socketPolicy.onClose(code, reason, everOpened, failStreak) + export NEVER_OPENED_LIMIT (a pure function cannot count 'N closes without opening'). A refusal message contains the server's close reason.",
+    "Page facts pinned by the e2e: modifier indicator `.mod-ind`; toasts `.toast` / `.toast.bad`; the connection message is visible page text.",
+    "C-14's tray Enter/^C textarea clear is verified by the C-15 e2e scenario `tray-clear`.",
+    "e2e items (network: true) need HW_BUILD_ENV pointing at an env file (outside the repo) with the BUILD_* variables."
+  ],
+  "items": [
+    {
+      "id": "A-1",
+      "title": "missing herdr binary \u2192 close 4500 after accept, no fork; exec failure in _spawn \u2192 child exit 127, no Python cleanup",
+      "phase": "P1",
+      "lane": "A",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a1.py",
+      "files": [
+        "backend/tests/acceptance/test_a1.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/fakes/herdr_echo.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:07:48-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "A-2",
+      "title": "herdr client exit \u2192 close 1012 within 2 s, also while output is backed up",
+      "phase": "P1",
+      "lane": "A",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a2.py",
+      "files": [
+        "backend/tests/acceptance/test_a2.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/fakes/herdr_exit.py",
+        "backend/tests/fakes/herdr_flood.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:07:50-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "A-3",
+      "title": "no socket / stale socket / silent listener \u2192 close 4503 after accept, client never executed, probe bounded and off the event loop",
+      "phase": "P1",
+      "lane": "A",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a3.py",
+      "files": [
+        "backend/tests/acceptance/test_a3.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/fakes/herdr_marker.py",
+        "backend/tests/fakes/herdr_echo.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:07:53-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "A-4",
+      "title": "nine spawn failures then a success still connects (live-terminal counter not leaked)",
+      "phase": "P1",
+      "lane": "A",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a4.py",
+      "files": [
+        "backend/tests/acceptance/test_a4.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/fakes/herdr_echo.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:07:55-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "A-5",
+      "title": "multi-MB output to a slow consumer: byte-exact in order below OUT_Q_MAX_BYTES; above it close 1013 \"output backlog\", never silent loss",
+      "phase": "P1",
+      "lane": "A",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a5.py",
+      "files": [
+        "backend/tests/acceptance/test_a5.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/fakes/herdr_flood.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 400,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:07:57-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "A-6",
+      "title": "text {\"type\":\"bogus\"} dropped; input works; binary bogus JSON forwarded verbatim; untyped text, resize, ping unchanged",
+      "phase": "P1",
+      "lane": "A",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a6.py",
+      "files": [
+        "backend/tests/acceptance/test_a6.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/fakes/herdr_record.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:07:59-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "A-7",
+      "title": "terminal limit \u2192 close 1013 with a reason after accept (and foreign Origin \u2192 1008 after accept)",
+      "phase": "P1",
+      "lane": "A",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a7.py",
+      "files": [
+        "backend/tests/acceptance/test_a7.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/fakes/herdr_echo.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:01-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "B-1",
+      "title": "pane blocked at resubscribe with no event \u2192 exactly one push (reconcile on every (re)subscribe)",
+      "phase": "P1",
+      "lane": "B",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b1.py",
+      "files": [
+        "backend/tests/acceptance/test_b1.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/acceptance/pushkit.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:12-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "B-2",
+      "title": "one pending confirm per pane: flicker inside the window \u2192 1 push; blocked\u2192working stays \u2192 0; two episodes \u2192 2",
+      "phase": "P1",
+      "lane": "B",
+      "class": "fixture-test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b2.py",
+      "files": [
+        "backend/tests/acceptance/test_b2.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py",
+        "backend/tests/acceptance/pushkit.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:21-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "B-3",
+      "title": "/docs, /redoc, /openapi.json \u2192 404",
+      "phase": "P1",
+      "lane": "B",
+      "class": "test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b3.py",
+      "files": [
+        "backend/tests/acceptance/test_b3.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:23-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "B-4",
+      "title": "requirements.txt = the full exact-pinned freeze of the running venv",
+      "phase": "P1",
+      "lane": "B",
+      "class": "test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b4.py",
+      "files": [
+        "backend/tests/acceptance/test_b4.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:24-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "B-5",
+      "title": "deploy/herdr.service + herdr-web.service parse as INI with the PRD 4.3 keys; no hard dependency; install.sh installs system units",
+      "phase": "P1",
+      "lane": "B",
+      "class": "test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b5.py",
+      "files": [
+        "backend/tests/acceptance/test_b5.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:26-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "B-6",
+      "title": "docs updated: API close codes and frames, deployment notes, no token-gate text (checklist)",
+      "phase": "P1",
+      "lane": "B",
+      "class": "visual",
+      "check": "true",
+      "files": [],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 30,
+      "status": "open"
+    },
+    {
+      "id": "B-7",
+      "title": "bracketed IPv6 loopback Host ([::1], [::1]:port) accepted by the default allowlist; other hosts still 400",
+      "phase": "P1",
+      "lane": "B",
+      "class": "test",
+      "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b7.py",
+      "files": [
+        "backend/tests/acceptance/test_b7.py",
+        "backend/tests/conftest.py",
+        "backend/tests/acceptance/__init__.py",
+        "backend/tests/acceptance/conftest.py",
+        "backend/tests/fakes/fake_herdr_api.py"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:28-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-1",
+      "title": "sanitizePaste drops ESC, C0 (keeps \\t\\n\\r), DEL, C1; bracketed-paste breakout comes out inert",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c1.test.ts",
+      "files": [
+        "frontend/test/acceptance/c1.test.ts",
+        "frontend/vitest.config.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:31-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-2",
+      "title": "every paste path goes through sanitizePaste (native, Ctrl+V, keyboard, Controls \u203a Paste, image); OSC 52 over the cap ignored with a toast",
+      "phase": "P1",
+      "lane": "C",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_items.sh C-2",
+      "files": [
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/check_items.sh",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1500,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:54-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-3",
+      "title": "modifier machine once/locked/off transitions with an injected clock; hook uses it",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c3.test.ts",
+      "files": [
+        "frontend/test/acceptance/c3.test.ts",
+        "frontend/vitest.config.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:08:57-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-4",
+      "title": "paste/report sources never modified, never consume; Alt on \\r \\t \\x7f",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c4.test.ts",
+      "files": [
+        "frontend/test/acceptance/c4.test.ts",
+        "frontend/vitest.config.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:00-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-5",
+      "title": "composing keyboard: Ctrl once + update \"c\" \u2192 exactly 0x03 + consumeModifier; \"ca\"/end \"c\" \u2192 no c, no 0x7f; once cleared from composition/tray",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c5.test.ts",
+      "files": [
+        "frontend/test/acceptance/c5.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:04-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-6",
+      "title": "regression: iPhone dictation replacement (insertText and composition) \u2192 clean final text; hook uses the composer",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c6.test.ts",
+      "files": [
+        "frontend/test/acceptance/c6.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:08-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-7",
+      "title": "regression: iOS predictive, Gboard and hardware traces byte-identical",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c7.test.ts",
+      "files": [
+        "frontend/test/acceptance/c7.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:12-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-8",
+      "title": "(F9a) commit with trailing chars \u2192 only the remainder, before and after the commit timer",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c8.test.ts",
+      "files": [
+        "frontend/test/acceptance/c8.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:16-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-9",
+      "title": "(F9b) start, update \"hel\", onData(\"hel\", keydownFinalize), onData(\"\\r\"), end \u2192 exactly hel\\r",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c9.test.ts",
+      "files": [
+        "frontend/test/acceptance/c9.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:19-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-10",
+      "title": "(F9c) re-composition into an existing word does not retype it",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c10.test.ts",
+      "files": [
+        "frontend/test/acceptance/c10.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:23-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-11",
+      "title": "(F9d) sendFailed / socket reset \u2192 composer reset, no backspaces for undelivered text",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c11.test.ts",
+      "files": [
+        "frontend/test/acceptance/c11.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:27-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-12",
+      "title": "(F9e) non-tail replacement \u2192 zero bytes (insertText and insertReplacementText) + clearTextarea",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c12.test.ts",
+      "files": [
+        "frontend/test/acceptance/c12.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:30-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-13",
+      "title": "(F9f) backspace counts in grapheme clusters: ZWJ family, flag, e+U+0301 with exact bytes",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c13.test.ts",
+      "files": [
+        "frontend/test/acceptance/c13.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:34-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-14",
+      "title": "(F9g/h) duplicate-commit guard drops only xterm's pending commit, once; second identical composition is sent",
+      "phase": "P1",
+      "lane": "C",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c14.test.ts",
+      "files": [
+        "frontend/test/acceptance/c14.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/composer.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:09:38-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "C-15",
+      "title": "e2e: dictation (both modes), predictive, hardware, paste breakout, Ctrl-on-composition, tray Enter/^C clear the textarea",
+      "phase": "P1",
+      "lane": "C",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_items.sh C-15",
+      "files": [
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/check_items.sh",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1500,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:10:10-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "D-1",
+      "title": "Mic: Enter timer fired > 1.5 s late \u2192 no Enter, text kept, toast; Mic.tsx uses submitDictation",
+      "phase": "P1",
+      "lane": "D",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d1.test.ts",
+      "files": [
+        "frontend/test/acceptance/d1.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/mic.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:10:14-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "D-2",
+      "title": "Mic: pane blocked now / gone / status failed \u2192 no Enter; blocked at deliver time \u2192 text not sent",
+      "phase": "P1",
+      "lane": "D",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d2.test.ts",
+      "files": [
+        "frontend/test/acceptance/d2.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/mic.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:10:18-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "D-3",
+      "title": "1008/1013/4503/4500 and N never-opened closes \u2192 visible message (with the reason), retry with backoff; terminalSocket uses the policy",
+      "phase": "P1",
+      "lane": "D",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d3.test.ts",
+      "files": [
+        "frontend/test/acceptance/d3.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/fakeSocket.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:10:21-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "D-4",
+      "title": "handshake not open within CONNECT_TIMEOUT_MS \u2192 abandoned and retried",
+      "phase": "P1",
+      "lane": "D",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d4.test.ts",
+      "files": [
+        "frontend/test/acceptance/d4.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/fakeSocket.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:10:25-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "D-5",
+      "title": "reconnect while CONNECTING replaces the pending socket",
+      "phase": "P1",
+      "lane": "D",
+      "class": "test",
+      "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d5.test.ts",
+      "files": [
+        "frontend/test/acceptance/d5.test.ts",
+        "frontend/vitest.config.ts",
+        "frontend/test/acceptance/helpers/fakeSocket.ts"
+      ],
+      "builder": "sonnet",
+      "network": false,
+      "timeout": 300,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:10:28-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    },
+    {
+      "id": "D-6",
+      "title": "e2e: mocked close 1013/4503 shows the message; a never-opening handshake leads to a second socket",
+      "phase": "P1",
+      "lane": "D",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_items.sh D-6",
+      "files": [
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/check_items.sh",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1500,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T15:11:37-06:00",
+        "rc": 1,
+        "head": "54e294b"
+      }
+    }
+  ],
+  "lock": {
+    "backend/tests/acceptance/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "backend/tests/acceptance/conftest.py": "fe1d841c4d218b38e119b404de174db254fd6cd0b6a4154fc22e09baf7bdfed5",
+    "backend/tests/acceptance/pushkit.py": "ae3fe883332d234a8b783afaef9a16d97452206a38ec3421cfc4a7106244cf33",
+    "backend/tests/acceptance/test_a1.py": "15b4e13884196ca5adaca545ccc88e8627d81f487d2463a635a6a78e49056ab3",
+    "backend/tests/acceptance/test_a2.py": "fc6a1711bc3d648d4ffd062ae9c6d9e40bae47341e1d054ac7fe16e0c10aa1d7",
+    "backend/tests/acceptance/test_a3.py": "956b72c14a1ff4ec865e17fefce38f6ded58133aaca1a6053a779f97b4852883",
+    "backend/tests/acceptance/test_a4.py": "ba247b8c5d27bb4fff2fc873b4bcba6576c607c51c456daddaa741da4c639f72",
+    "backend/tests/acceptance/test_a5.py": "721afd703c52d7599337005c206e10e19f6d06a89c2964ccea33e80d489e900a",
+    "backend/tests/acceptance/test_a6.py": "edcdfd37bb7ea1bd1cab773b2ba9d08e6eecb394658a59eea3b4a4749d9bb053",
+    "backend/tests/acceptance/test_a7.py": "c6568aee8934718c3d8d7a75d740c489d714ea363b1359b80349d7355e2d78ab",
+    "backend/tests/acceptance/test_b1.py": "5c486c08b323807959b263be0f70e63c0a27e2d179c6dfffdc8f313636ba96a9",
+    "backend/tests/acceptance/test_b2.py": "a311b1eb964cb31e19a9315f95c8d42f381dfbda6c3e8d93eb44d2d43136fa7c",
+    "backend/tests/acceptance/test_b3.py": "a4fd71ecdf6e89c2ec138eea44461f39a7aa57e0ba6c46a163a194a28619f5b4",
+    "backend/tests/acceptance/test_b4.py": "1a44e5edb68324ebf4ffedba4fcf0561b5d2f44cc447d776588ceaaf9c732ab1",
+    "backend/tests/acceptance/test_b5.py": "2a7d8c77ecb92e62862eaf470fcf6cf7661ef8fa7bf028f6fab975f45128c29d",
+    "backend/tests/acceptance/test_b7.py": "ad0aa5ea4d65910b006163e02a65b6fd86310c3056681db2af5960419dc17255",
+    "backend/tests/conftest.py": "4dd06a19440675cda1abbdefbb90b98520f5cc0c4ea1871f4c4f8a8d79298773",
+    "backend/tests/fakes/fake_herdr_api.py": "c3536da989dae978d1390e5ff2db0f28952d978bbd554732ff68de4413166de8",
+    "backend/tests/fakes/herdr_echo.py": "113758c85797e10274356d018694a821a5083dec0aa51095aef29d7d7be130dd",
+    "backend/tests/fakes/herdr_exit.py": "0f1b4fcb3f5b4c9c4a512cbc9957d95b43b0581feca2fbdd64153eb48eff42a9",
+    "backend/tests/fakes/herdr_flood.py": "f7a459ec4e454530a3875ad7e259af4fe5912f3935426e2af8d3cac940b6aa5c",
+    "backend/tests/fakes/herdr_marker.py": "883ed8f04e088d78dca5d140c058f7b013b57c94efb0fc28d6a916acfedd17f1",
+    "backend/tests/fakes/herdr_record.py": "435648e21bb7c79201c3011ac048de157eb17fcd043fa25853d7f328d21ada9e",
+    "frontend/e2e/acceptance_e2e.py": "04a06ab3c21cc7fd5191b3a6e104911b73e500175c12bdec698e904ea82c8cef",
+    "frontend/e2e/build_remote.sh": "571038def16b416dca18e7c3ddeba17ec5169ea133b6f53e7b2cc165652c577f",
+    "frontend/e2e/check_items.sh": "78574112969dea0c12f6583fbee0685e1f03eb9cf044a8a52fff59c0dd6908a4",
+    "frontend/e2e/run_e2e.py": "53fb89058dec647826462f9b6aa39fb1df53e9167f3aef8178d72a6e2fb1a8f0",
+    "frontend/test/acceptance/c1.test.ts": "d8025107e2e3007f63ec03cd70b0bfa9044625c1eedb08c00062bd1e214a151e",
+    "frontend/test/acceptance/c10.test.ts": "666a1e4cd85a9c5bc792d08a4ba0d8ee2dbef9eccdd081922f54c0b84564004b",
+    "frontend/test/acceptance/c11.test.ts": "70fb67e634ff330e39e7d1cd8a3fb2e0ed435962f0d6a041a21693ff5a78f4d2",
+    "frontend/test/acceptance/c12.test.ts": "0555f657af1f5da01c0ee84315e6e3125aa257d02609ea5c6b5ee0fc38e955da",
+    "frontend/test/acceptance/c13.test.ts": "c448d4833c9d98cd09649445a5e685ba3f35c3d6ffcfe5d6808f5a135ab7f87f",
+    "frontend/test/acceptance/c14.test.ts": "205071f28d5b7aeee34840f517e0a31b140b640ce0eb6fbef60c1bc6551030a8",
+    "frontend/test/acceptance/c3.test.ts": "153fed54c9a02ae87e58cfba88d03eb060d9e53a69d9babc4a7643e3c2376de9",
+    "frontend/test/acceptance/c4.test.ts": "57a836a3ddcae74a367bf292d2fed516bdf5656b2be069ee9d114f4c3207bd1d",
+    "frontend/test/acceptance/c5.test.ts": "1131a464e9e87f6326125c8684712945765b9bed0507ec740b519c1f60e24fe0",
+    "frontend/test/acceptance/c6.test.ts": "ae2a9fe7d3f2a0fa8af861f24bac30c0cfe02737f3d316f4d28b8ca0927d2fea",
+    "frontend/test/acceptance/c7.test.ts": "00f082db5cc9c52132d07f8a0673dbc70435572df58c8743b856d8743194acca",
+    "frontend/test/acceptance/c8.test.ts": "03913e18d0eea1a9bcf2f5f770af1602952f1a1a0e2f479a69ee29590ae17623",
+    "frontend/test/acceptance/c9.test.ts": "95cd34c90cb7efe28e363737854840cf7071f3f0805277f1cdae15769e123398",
+    "frontend/test/acceptance/d1.test.ts": "f0d016cb7c596f061ac9125dfb5df70466f1bd4a0d33b35110cb5bf364a6a63a",
+    "frontend/test/acceptance/d2.test.ts": "646df7de810eca9137b4fbe4999c5e6c5e8ed851e8ea5162eab027ec9655a9bc",
+    "frontend/test/acceptance/d3.test.ts": "7ed3433fc7a1aa7d5e11168548a0482033147e849280fc82985e3e1d21a22725",
+    "frontend/test/acceptance/d4.test.ts": "b8b0ef069ed75b53564f08f9f1a514db7d50325a151a034757c528e9cfffda94",
+    "frontend/test/acceptance/d5.test.ts": "de5edf106a3f0b15add72c1e418a821fe37bb1f2714b3342911e7a33ec35754a",
+    "frontend/test/acceptance/helpers/composer.ts": "35e0393eb3073eef2023edb60b0894b721ea0d859db7f32eefad831501adc8b9",
+    "frontend/test/acceptance/helpers/fakeSocket.ts": "5f98a9131c804df9ea7ebc34b503a44cad130c455ce6ffc15a9ab368d053c1d6",
+    "frontend/test/acceptance/helpers/mic.ts": "e1d6977b6ec28eaf4fc36f7e4714820bc6977fbeb30cbf4672943da77f40ed4a",
+    "frontend/vitest.config.ts": "0f8e27f84bcbad6fa87a5d452533498974f1623b8d92e6e6bc329370e9904034"
+  },
+  "locked_at": "2026-11-15T15:07:44-06:00"
+}

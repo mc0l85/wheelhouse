@@ -142,6 +142,41 @@ Dev-only input recorder (restored from 17d6d0c behind a build flag, off in produ
 
 ## 6. Requirements (generated — `prd/acceptance.json`)
 <!-- prd:items -->
+- [ ] **A-1** missing herdr binary → close 4500 after accept, no fork; exec failure in _spawn → child exit 127, no Python cleanup — _fixture-test, sonnet_
+- [ ] **A-2** herdr client exit → close 1012 within 2 s, also while output is backed up — _fixture-test, sonnet_
+- [ ] **A-3** no socket / stale socket / silent listener → close 4503 after accept, client never executed, probe bounded and off the event loop — _fixture-test, sonnet_
+- [ ] **A-4** nine spawn failures then a success still connects (live-terminal counter not leaked) — _fixture-test, sonnet_
+- [ ] **A-5** multi-MB output to a slow consumer: byte-exact in order below OUT_Q_MAX_BYTES; above it close 1013 "output backlog", never silent loss — _fixture-test, sonnet_
+- [ ] **A-6** text {"type":"bogus"} dropped; input works; binary bogus JSON forwarded verbatim; untyped text, resize, ping unchanged — _fixture-test, sonnet_
+- [ ] **A-7** terminal limit → close 1013 with a reason after accept (and foreign Origin → 1008 after accept) — _fixture-test, sonnet_
+- [ ] **B-1** pane blocked at resubscribe with no event → exactly one push (reconcile on every (re)subscribe) — _fixture-test, sonnet_
+- [ ] **B-2** one pending confirm per pane: flicker inside the window → 1 push; blocked→working stays → 0; two episodes → 2 — _fixture-test, sonnet_
+- [ ] **B-3** /docs, /redoc, /openapi.json → 404 — _test, sonnet_
+- [ ] **B-4** requirements.txt = the full exact-pinned freeze of the running venv — _test, sonnet_
+- [ ] **B-5** deploy/herdr.service + herdr-web.service parse as INI with the PRD 4.3 keys; no hard dependency; install.sh installs system units — _test, sonnet_
+- [ ] **B-6** docs updated: API close codes and frames, deployment notes, no token-gate text (checklist) — _visual, sonnet_
+- [ ] **B-7** bracketed IPv6 loopback Host ([::1], [::1]:port) accepted by the default allowlist; other hosts still 400 — _test, sonnet_
+- [ ] **C-1** sanitizePaste drops ESC, C0 (keeps \t\n\r), DEL, C1; bracketed-paste breakout comes out inert — _test, sonnet_
+- [ ] **C-2** every paste path goes through sanitizePaste (native, Ctrl+V, keyboard, Controls › Paste, image); OSC 52 over the cap ignored with a toast — _fixture-test, sonnet_
+- [ ] **C-3** modifier machine once/locked/off transitions with an injected clock; hook uses it — _test, sonnet_
+- [ ] **C-4** paste/report sources never modified, never consume; Alt on \r \t \x7f — _test, sonnet_
+- [ ] **C-5** composing keyboard: Ctrl once + update "c" → exactly 0x03 + consumeModifier; "ca"/end "c" → no c, no 0x7f; once cleared from composition/tray — _test, sonnet_
+- [ ] **C-6** regression: iPhone dictation replacement (insertText and composition) → clean final text; hook uses the composer — _test, sonnet_
+- [ ] **C-7** regression: iOS predictive, Gboard and hardware traces byte-identical — _test, sonnet_
+- [ ] **C-8** (F9a) commit with trailing chars → only the remainder, before and after the commit timer — _test, sonnet_
+- [ ] **C-9** (F9b) start, update "hel", onData("hel", keydownFinalize), onData("\r"), end → exactly hel\r — _test, sonnet_
+- [ ] **C-10** (F9c) re-composition into an existing word does not retype it — _test, sonnet_
+- [ ] **C-11** (F9d) sendFailed / socket reset → composer reset, no backspaces for undelivered text — _test, sonnet_
+- [ ] **C-12** (F9e) non-tail replacement → zero bytes (insertText and insertReplacementText) + clearTextarea — _test, sonnet_
+- [ ] **C-13** (F9f) backspace counts in grapheme clusters: ZWJ family, flag, e+U+0301 with exact bytes — _test, sonnet_
+- [ ] **C-14** (F9g/h) duplicate-commit guard drops only xterm's pending commit, once; second identical composition is sent — _test, sonnet_
+- [ ] **C-15** e2e: dictation (both modes), predictive, hardware, paste breakout, Ctrl-on-composition, tray Enter/^C clear the textarea — _fixture-test, sonnet_
+- [ ] **D-1** Mic: Enter timer fired > 1.5 s late → no Enter, text kept, toast; Mic.tsx uses submitDictation — _test, sonnet_
+- [ ] **D-2** Mic: pane blocked now / gone / status failed → no Enter; blocked at deliver time → text not sent — _test, sonnet_
+- [ ] **D-3** 1008/1013/4503/4500 and N never-opened closes → visible message (with the reason), retry with backoff; terminalSocket uses the policy — _test, sonnet_
+- [ ] **D-4** handshake not open within CONNECT_TIMEOUT_MS → abandoned and retried — _test, sonnet_
+- [ ] **D-5** reconnect while CONNECTING replaces the pending socket — _test, sonnet_
+- [ ] **D-6** e2e: mocked close 1013/4503 shows the message; a never-opening handshake leads to a second socket — _fixture-test, sonnet_
 <!-- /prd:items -->
 
 ### 6.1 Requirement intent

@@ -11,3 +11,8 @@ Compare two runs byte-for-byte:
   python3 frontend/e2e/compare.py a.json b.json
 `dictation-composition` is a known-failing synthetic scenario on main@34c297f (recorded, compared, not gating).
 Dev input recorder: build with VITE_INPUT_TRACE=1 and run the backend with HERDRWEB_DEBUG_INPUT=1.
+
+Acceptance scenarios (P1 ledger items C-2, C-15, D-6) live in `acceptance_e2e.py`:
+  python3 frontend/e2e/acceptance_e2e.py <dist-out> --items C-2,C-15,D-6
+The ledger runs them through `frontend/e2e/check_items.sh <ids>`, which builds with build_remote.sh first;
+it needs HW_BUILD_ENV set to an env file (outside the repo) that exports the BUILD_* variables.
