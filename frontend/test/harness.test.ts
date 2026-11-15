@@ -9,8 +9,8 @@ describe("vitest + jsdom harness", () => {
     document.body.appendChild(el);
     expect(document.querySelector("textarea")?.value).toBe("hi");
   });
-  it("skeleton modules throw todo until implemented", () => {
-    expect(() => sanitizePaste("x")).toThrow("todo");
-    expect(() => createModifiers({ now: () => 0, onChange: () => {} })).toThrow("todo");
+  it("input modules load", () => {
+    expect(sanitizePaste("x\x1b")).toBe("x");
+    expect(createModifiers({ now: () => 0, onChange: () => {} }).state("ctrl")).toBe("off");
   });
 });
