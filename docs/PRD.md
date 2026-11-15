@@ -92,14 +92,16 @@ Dev-only input recorder (restored from 17d6d0c behind a build flag, off in produ
      `pane process-info`, `/proc/<pid>/cmdline` per pane. Abort if an agent pane has no session ref.
      `--dry-run` stops here and prints the planned commands.
   2. **Idle gate**: wait ≤ 5 min for working panes; abort if any pane is blocked or still working (`--force`).
-  3. **Quit each agent, coordinator pane last** (keys proven in P0-3; fallback SIGTERM to the manifest pid);
+  3. **Quit each agent, coordinator pane last**: one `send-keys ctrl+c ctrl+c` call, wait until `pane list` shows no agent (fallback SIGTERM to the manifest pid);
      re-copy `session.json`.
   4. **Stop the web unit** (this also ends the old in-cgroup server); wait until no `herdr server` runs and the
      socket refuses; check `session.json` parses with the manifest's tab count, else restore the copy.
   5. **Deploy** the staged backend + frontend (old tree kept); start web; prove the guard live (E-6).
   6. **Start herdr.service**; wait for the socket; assert cgroup and pane count.
-  7. **Reconcile**: wait ≤ 60 s for native resume to show each manifest agent + session id; if absent and the
-     foreground is the shell → relaunch (`claude --resume <id>`; pi per P0-3); wrong session → record, don't touch.
+  7. **Relaunch** (Decision 11): every agent quit in step 3 had its `agent_session` cleared, so native resume
+     will not bring it back. Per manifest row, once the pane's foreground is the shell: `claude --resume <uuid>` /
+     `pi --session <path>` (no prompt yet → plain `claude` / `pi`); wait ≤ 60 s for `pane list` to show the agent
+     with the manifest session id; mismatch or timeout → record, don't retry blindly.
   8. **Resume**: per pane `agent wait --until idle`, then send `resume` + Enter (blocked on a dialog → skip,
      record). Coordinator last.
   9. **Verify + report**: result file; independent E-checks; restart web once (E-3); notify the owner.
@@ -254,6 +256,12 @@ late-Enter skip toast (lock the phone during the countdown).
 | 7 | Backlog | close 1013 above a byte cap instead of pause/resume | no stall, no EOF trap | 2026-11-15 |
 | 8 | Mic "status changed" | narrowed to blocked / gone / fetch failed | most dictations finish a turn within 10 s | 2026-11-15 |
 
+| 9 | Backspace unit (C-13) | grapheme clusters (`Intl.Segmenter`) | P0-4: the Claude prompt box deletes one grapheme per DEL; bash deletes code points (UTF-8) or bytes (C locale) — grapheme is the smaller count | 2026-11-15 |
+| 10 | Nightly update (E-7) | `herdr update` without `--handoff` | P0-1: a live handoff ends a `KillMode=mixed` unit and every pane; with `KillMode=process` the new server is orphaned in a dead unit | 2026-11-15 |
+| 11 | Cutover relaunch | relaunch every quit agent from the manifest (`claude --resume <uuid>`, `pi --session <path>`); an agent with no prompt yet is relaunched fresh | P0-3: a clean quit clears `agent_session`, so native resume will not fire for quit panes; quit = one `send-keys ctrl+c ctrl+c` call (≈0.8 s claude, ≈0.4 s pi) | 2026-11-15 |
+| 12 | herdr.service locale | keep today's `LANG=C`, `LC_CTYPE=C.UTF-8` | behaviour-neutral for every pane | 2026-11-15 |
+| 13 | Guard scope (A-3) | probe only before spawning a client | P0-2: no CLI verb (`pane list`, `api snapshot`, `status`) auto-starts a server; only a client attach does | 2026-11-15 |
+
 ## 9. Open decisions
 
-None. P0 probe results may change C-13's unit and E-7's path; they are facts, not preferences.
+None. P0 results are recorded as Decisions 9–13.
