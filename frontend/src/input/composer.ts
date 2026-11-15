@@ -48,6 +48,8 @@ export interface ComposerState {
   /** `expected` of the composition that armed `lastCommit`. */
   lastExpected: string;
   startLen: number;
+  /** Textarea value at compositionstart when its cursor was collapsed at the end (else null). */
+  startVal: string | null;
   /** The composition's first letter went out modified: the pane has `sent` where the text has `raw`. */
   lead: { raw: string; sent: string } | null;
   /** First update whose text already ends the textarea: a re-composition of an existing word, or new text? */
@@ -67,7 +69,7 @@ export interface ComposerResult {
 export function initialComposerState(): ComposerState {
   return {
     comp: null, compFinal: "", lastCommit: "", lastCommitAt: 0, replPending: null,
-    ctrl: "off", alt: "off", timerArmed: false, expected: "", lastExpected: "", startLen: 0,
+    ctrl: "off", alt: "off", timerArmed: false, expected: "", lastExpected: "", startLen: 0, startVal: null,
     lead: null, adopt: null, suppress: null, clearOnInput: false,
   };
 }
@@ -164,6 +166,7 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       return done({
         ...s, comp: tailSel(event.ta), lead: null, adopt: null, suppress: null, replPending: null,
         ctrl: event.mods.ctrl, alt: event.mods.alt, startLen: event.ta.value.length,
+        startVal: event.ta.selStart === event.ta.selEnd && event.ta.selEnd === event.ta.value.length ? event.ta.value : null,
         lastCommit: "", lastExpected: "", expected: "", clearOnInput: false,
       }, send);
     }
@@ -174,11 +177,12 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       const data = event.data;
       if (s.comp === null) s = { ...s, comp: "", lead: null };
       if (s.comp === "" && data !== "") {
-        const t = event.ta;
-        if (t.selStart === t.selEnd && t.selEnd === t.value.length && t.value.endsWith(data)) {
+        // Judged on the textarea as it was at compositionstart (the update's own snapshot may
+        // already include the new text, depending on the browser's event order).
+        if (s.startVal !== null && s.startVal.endsWith(data)) {
           // Re-composition of a word the pane already has, or fresh text that happens to match
           // the textarea's tail? The `input` that follows tells (the textarea grows or not).
-          return done({ ...s, adopt: { data, len: t.value.length, mods: event.mods } }, send);
+          return done({ ...s, adopt: { data, len: s.startLen, mods: event.mods } }, send);
         }
         const r = firstSend(s, data, event.mods, effects);
         return done(r.state, send + r.send);
