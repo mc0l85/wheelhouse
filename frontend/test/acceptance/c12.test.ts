@@ -2,7 +2,7 @@
 // suggestion on an earlier word) cannot be mapped onto the pane's cursor: zero bytes, for both
 // insertText and insertReplacementText, then a clearTextarea effect.
 import { describe, expect, it } from "vitest";
-import { drive, ev, ta } from "./helpers/composer";
+import { applyDel, drive, ev, ta } from "./helpers/composer";
 
 describe("C-12 non-tail replacement", () => {
   it("insertText over a non-tail selection → 0 bytes + clearTextarea", () => {
@@ -28,12 +28,14 @@ describe("C-12 non-tail replacement", () => {
     });
   }
 
-  it("a tail replacement still works (control)", () => {
-    // order: beforeinput insertReplacementText with "teh" (4..7) selected at the end, input → 7f×3 + "the"
+  it("a tail replacement sends the grapheme-prefix-minimal edit (control)", () => {
+    // order: beforeinput insertReplacementText with "teh" (4..7) selected at the end, input.
+    // "teh" → "the" keeps "t": 7f 7f "he" (PRD 4.1 prefix-minimal rule, as in C-10 / C-13)
     const r = drive([
       ev.before(0, "insertReplacementText", "the", ta("cat teh", 4, 7)),
       ev.input(1, "insertReplacementText", ta("cat the", 7, 7)),
     ]);
-    expect(r.send).toBe("\x7f\x7f\x7fthe");
+    expect(r.send).toBe("\x7f\x7fhe");
+    expect(applyDel("cat teh" + r.send)).toBe("cat the");
   });
 });

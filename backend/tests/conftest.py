@@ -22,13 +22,16 @@ _ROOT = tempfile.mkdtemp(prefix="hwt-")
 _HOME = os.path.join(_ROOT, "herdr-home")
 os.makedirs(_HOME, exist_ok=True)
 
+# Nothing inherited from the shell: every HERDRWEB_* setting (e.g. a deployment's
+# HERDRWEB_ALLOWED_HOSTS, read at import) is removed, then the test values are forced.
+for _k in [k for k in os.environ if k.startswith("HERDRWEB_")]:
+    del os.environ[_k]
 # Forced, never setdefault: an inherited HERDR_BIN pointing at the real binary must not survive.
 os.environ["HERDR_BIN"] = str(FAKES / "herdr_echo.py")
 os.environ["HERDR_HOME"] = _HOME
 os.environ["HERDR_SESSION"] = "default"
 os.environ["HERDRWEB_STATE_DIR"] = os.path.join(_ROOT, "state")
 os.environ["HERDRWEB_ENABLE_WRITES"] = "0"
-os.environ.pop("HERDRWEB_DEBUG_INPUT", None)
 
 from app.config import settings  # noqa: E402  (after the env is forced)
 

@@ -7,14 +7,17 @@ import hookSrc from "../../src/hooks/useHerdrTerminal.ts?raw";
 
 const PHRASES = ["t", "take", "take a", "take a look", "take a look at", "take a look at it."];
 const FINAL = "take a look at it.";
+// a later hypothesis rewrites an earlier word ("lock" → "look"), not just an extension
+const REWRITE = ["take", "take a", "take a lock", "take a look at it."];
 
 describe("C-6 dictation replacement", () => {
-  it("insertText mode: each hypothesis selects the previous one and inserts the whole phrase", () => {
+  for (const [mode, phrases] of [["extending", PHRASES], ["rewriting", REWRITE]] as const) {
+  it(`insertText mode, ${mode}: each hypothesis selects the previous one and inserts the whole phrase`, () => {
     // per hypothesis h: beforeinput insertText(h) over the selected previous text,
     // input insertText (textarea now h), xterm onData(h, other)
     const events: ComposerEvent[] = [];
     let prev = "", t = 0;
-    for (const h of PHRASES) {
+    for (const h of phrases) {
       events.push(ev.before(t, "insertText", h, ta(prev, 0, prev.length)));
       events.push(ev.input(t + 1, "insertText", ta(h)));
       events.push(ev.data(t + 2, h, "other"));
@@ -24,13 +27,13 @@ describe("C-6 dictation replacement", () => {
     expect(applyDel(r.send)).toBe(FINAL);
   });
 
-  it("composition mode: each hypothesis is a new composition over the selected previous text", () => {
+  it(`composition mode, ${mode}: each hypothesis is a new composition over the selected previous text`, () => {
     // per hypothesis h: compositionstart (previous text selected), compositionupdate h (textarea before),
     // input insertCompositionText (textarea now h), compositionend h,
     // xterm commit onData = h.substring(previous length) (only when non-empty)
     const events: ComposerEvent[] = [];
     let prev = "", t = 0;
-    for (const h of PHRASES) {
+    for (const h of phrases) {
       const sel = ta(prev, 0, prev.length);
       events.push(ev.start(t, sel));
       events.push(ev.update(t + 5, h, sel));
@@ -43,6 +46,7 @@ describe("C-6 dictation replacement", () => {
     const r = drive(events);
     expect(applyDel(r.send)).toBe(FINAL);
   });
+  }
 
   it("the terminal hook routes input through the composer", () => {
     expect(hookSrc).toMatch(/from\s+["']\.\.\/input\/composer["']/);

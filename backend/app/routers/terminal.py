@@ -42,6 +42,12 @@ from ..origin import origin_ok
 router = APIRouter(prefix="/api/ws", tags=["terminal"])
 _live = 0       # open terminal sockets (each one is a herdr client process)
 
+
+def reset_live_count() -> None:
+    """Tests only: forget every live terminal (acceptance tests call this before each server)."""
+    global _live
+    _live = 0
+
 _STRIP_ENV = ("HERDR_ENV", "HERDR_PANE_ID", "HERDR_SOCKET_PATH")
 
 

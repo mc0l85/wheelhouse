@@ -6,6 +6,10 @@ as HTTP 403 -> 1006 with no reason) fails the test as an InvalidStatus handshake
 
 Interfaces these tests pin (beyond the existing app):
   app.routers.terminal._spawn(session, rows, cols) -> (pid, fd)   forks a herdr client
+      UNCONDITIONALLY (no existence check inside): the herdr-binary check (4500) and the socket
+      probe (4503) live in the route, before _spawn is called. A-1 calls _spawn directly with a
+      binary execvp cannot run and expects a forked child that exits 127.
+  app.routers.terminal.reset_live_count()   sets the live-terminal counter to 0 (tests only)
   app.routers.terminal.OUT_Q_MAX_BYTES   output backlog cap, read at call time (tests monkeypatch it)
   app.herdr.server_alive(timeout) -> bool   bounded probe of herdr's socket; any newline-
                                             terminated JSON reply (result OR error) = alive
@@ -16,7 +20,6 @@ Interfaces these tests pin (beyond the existing app):
 """
 from __future__ import annotations
 
-import errno
 import os
 import socket
 import subprocess
@@ -33,24 +36,17 @@ from tests.conftest import FAKES  # noqa: F401  (env is forced by the parent con
 
 
 def _ensure_loopback() -> None:
-    """prd_check runs checks in an empty network namespace; bring lo up there (no-op elsewhere)."""
-    s = socket.socket()
-    try:
-        s.bind(("127.0.0.1", 0))
-    except OSError as e:
-        if e.errno != errno.EADDRNOTAVAIL:
-            raise
-        subprocess.run(["ip", "link", "set", "lo", "up"], check=False, capture_output=True)
-    finally:
-        s.close()
-
-
-@pytest.fixture(autouse=True)
-def _reset_terminal_counter():
-    from app.routers import terminal
-    if hasattr(terminal, "_live"):
-        terminal._live = 0
-    yield
+    """prd_check runs checks in an empty network namespace, where `lo` exists but is down (bind works,
+    connect fails). Bring it up there; fail loudly if that is not possible."""
+    import fcntl
+    import struct
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:   # SIOCGIFFLAGS: this namespace's lo
+        flags = struct.unpack("H", fcntl.ioctl(s.fileno(), 0x8913, struct.pack("256s", b"lo"))[16:18])[0]
+    if flags & 0x1:                                  # IFF_UP
+        return
+    r = subprocess.run(["ip", "link", "set", "lo", "up"], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"loopback is down and `ip link set lo up` failed (rc={r.returncode}): {r.stderr.strip()}")
 
 
 class LiveServer:
@@ -82,6 +78,8 @@ class LiveServer:
 
 @pytest.fixture
 def live_server():
+    from app.routers import terminal
+    terminal.reset_live_count()            # pinned accessor: each test starts with no live terminals
     srv = LiveServer().start()
     yield srv
     srv.stop()

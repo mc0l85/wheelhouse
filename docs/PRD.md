@@ -1,6 +1,6 @@
 # PRD — herdr web hardening and input correctness (2026-11)
 
-**Status:** decided, Fable-reviewed (rev 2) · **Repo:** herdr-web (this repo) · **Owner:** repo owner
+**Status:** decided, reviewer-checked (rev 2) · **Repo:** herdr-web (this repo) · **Owner:** repo owner
 **Last updated:** 2026-11-15
 
 ## 1. Goal
@@ -42,14 +42,16 @@ Then the pure modules (no DOM; clock and timers injected):
 |---|---|
 | `input/sanitize.ts` | `sanitizePaste(text)`: drop ESC, other C0 except `\t \n \r`, DEL, and C1 (U+0080–U+009F). `OSC52_MAX_BYTES` counts decoded bytes. |
 | `input/modifiers.ts` | `ModState` machine: tap → once; tap again within `DOUBLE_TAP_MS` → locked; tap while once/locked (after the window) → off; a tap after "once" was consumed → once. `apply(data, source)` with `source ∈ {key, composition, tray, paste, report}`: Ctrl applies to one printable char from key/composition/tray (table: a–z, space, `@ [ \ ] ^ _ ?`; unmapped char → sent unmodified, modifier still consumed); Alt applies to one printable char or `\r \t \x7f`; paste/report never modified and never consume. Emits a state-change callback so the UI indicator updates when "once" is consumed. |
-| `input/composer.ts` | `reduce(state, event) → { state, send: string, effects: Effect[] }`. Events carry `now` and textarea snapshots `{ value, selStart, selEnd }`: `compositionstart/update/end`, `beforeinput(inputType, data)`, `input(inputType)`, `onData(d, origin)` with `origin ∈ {commit, keydownFinalize, textareaChange, other}` (xterm 5.5.0's three onData sources), `timeout(id)`, `sendFailed`, `reset`. Effects: `setTimer(id, ms)`, `cancelTimer(id)`, `clearTextarea`. Takes the modifier state so a composing keyboard's first letter can be modified. Backspace unit: decided by probe P0-4 (default: grapheme clusters via `Intl.Segmenter`, the smaller count). |
+| `input/composer.ts` | `reduce(state, event) → { state, send: string, effects: Effect[] }`. Events carry `now` and textarea snapshots `{ value, selStart, selEnd }`: `compositionstart/update/end`, `beforeinput(inputType, data)`, `input(inputType)`, `onData(d, origin)` with `origin ∈ {commit, keydownFinalize, textareaChange, other}` (xterm 5.5.0's three onData sources), `timeout(id)`, `sendFailed`, `reset`. Effects: `setTimer(id, ms)`, `cancelTimer(id)`, `clearTextarea`, `consumeModifier(m)` (a "once" modifier was applied to a composition's first letter). Takes the modifier state so a composing keyboard's first letter can be modified. Backspace unit: grapheme clusters via `Intl.Segmenter` (Decision 9). **Prefix-minimal edits:** replacing text the pane already has (a composition update, a selected-tail `insertText` / `insertReplacementText`) sends one DEL per grapheme after the common grapheme prefix, then the new suffix ("teh"→"the" = `7f 7f he`; "hello"→"help" = `7f 7f p`). `DUP_WINDOW_MS` (exported, 1500): xterm's commit `onData` that arrives within this long after `compositionend` and matches the committed text (or its xterm substring) is dropped once; later, an identical `onData` is always sent. |
 | `components/micSubmit.ts` | the whole post-dictation sequence with injected clock, timer and api: deliver text (unless target is blocked at deliver time), wait `SUBMIT_MS`, re-check, send Enter. Skip Enter (text kept, toast with reason) when: timer fired > 1.5 s late, pane blocked now, pane gone, status fetch failed. |
-| `hooks/socketPolicy.ts` | `onClose(code, reason, everOpened)` → `{ retry, delayMs, message? }`; 1008, 1013, 4503 and "N closes without ever opening" all show a message; `CONNECT_TIMEOUT_MS`. |
+| `hooks/socketPolicy.ts` | `onClose(code, reason, everOpened, failStreak)` → `{ retry, delayMs, message? }`, `failStreak` = consecutive closes of sockets that never opened, counting this one (0 when this one opened); 1008, 1013, 4503, 4500 and `failStreak >= NEVER_OPENED_LIMIT` (exported, 3) show a message, which contains the close reason when one was given; `CONNECT_TIMEOUT_MS`. |
 
 Paste call sites (all through `sanitizePaste`): `term.paste` at the keyboard/Controls/Ctrl+V/image paths and
 the native paste fallthrough, which gets `preventDefault` + an explicit sanitised paste.
 On-screen Enter / ^C (tray) clear xterm's textarea.
 Dev-only input recorder (restored from 17d6d0c behind a build flag, off in production) captures fixture traces.
+The wrapped-URL link provider (`src/wrapLinks.ts`, registered in `useHerdrTerminal.ts` by 3e78f69) must be kept
+by every lane that edits the hook.
 
 ### 4.2 Backend
 
@@ -57,6 +59,8 @@ Dev-only input recorder (restored from 17d6d0c behind a build flag, off in produ
   - **accept first, then close** with code + reason for every refusal (the browser sees a pre-accept close as
     HTTP 403 → 1006 with no reason): 1008 origin, 1013 terminal limit, 4503 herdr server not running,
     4500 herdr binary missing.
+  - `_spawn(session, rows, cols) → (pid, fd)` forks unconditionally; the binary check and the socket probe live in
+    the route, before `_spawn` is called. `reset_live_count()` (tests only) zeroes the live-terminal counter.
   - Before spawning: check the herdr binary exists (else 4500, no fork) and probe the herdr socket with a
     1–2 s timeout in a thread (no socket file / stale socket / listener that never replies → 4503, client not
     spawned).
@@ -70,7 +74,9 @@ Dev-only input recorder (restored from 17d6d0c behind a build flag, off in produ
 - `push.py` / `events.py`: on every (re)subscribe, reconcile — `notified ∩= currently blocked`; any blocked pane
   not in `notified` goes through `on_status`. At most one pending confirm task per pane.
 - `main.py`: `/docs`, `/redoc`, `/openapi.json` disabled.
-- `config.py`: probe timeout setting; the `::1` allowlist default fixed (bracketed IPv6 Host).
+- `config.py`: probe timeout setting (`probe_timeout`); the `::1` allowlist default fixed (bracketed IPv6 Host).
+  Starlette's `TrustedHostMiddleware` takes the host as `Host.split(":")[0]`, so `[::1]:8086` becomes `[`: B-7 needs
+  bracket-aware host parsing in `main.py` (its own host check), not only a new default in `config.py`.
 - `requirements.txt`: the full freeze of the running venv, exact pins.
 - `docs/API.md`: close codes, frame types, binary input.
 
@@ -161,22 +167,22 @@ Dev-only input recorder (restored from 17d6d0c behind a build flag, off in produ
 - [ ] **C-3** modifier machine once/locked/off transitions with an injected clock; hook uses it — _test, sonnet_
 - [ ] **C-4** paste/report sources never modified, never consume; Alt on \r \t \x7f — _test, sonnet_
 - [ ] **C-5** composing keyboard: Ctrl once + update "c" → exactly 0x03 + consumeModifier; "ca"/end "c" → no c, no 0x7f; once cleared from composition/tray — _test, sonnet_
-- [ ] **C-6** regression: iPhone dictation replacement (insertText and composition) → clean final text; hook uses the composer — _test, sonnet_
+- [ ] **C-6** regression: iPhone dictation replacement, extending and rewriting an earlier word (insertText and composition) → clean final text; hook uses the composer — _test, sonnet_
 - [ ] **C-7** regression: iOS predictive, Gboard and hardware traces byte-identical — _test, sonnet_
 - [ ] **C-8** (F9a) commit with trailing chars → only the remainder, before and after the commit timer — _test, sonnet_
 - [ ] **C-9** (F9b) start, update "hel", onData("hel", keydownFinalize), onData("\r"), end → exactly hel\r — _test, sonnet_
 - [ ] **C-10** (F9c) re-composition into an existing word does not retype it — _test, sonnet_
 - [ ] **C-11** (F9d) sendFailed / socket reset → composer reset, no backspaces for undelivered text — _test, sonnet_
-- [ ] **C-12** (F9e) non-tail replacement → zero bytes (insertText and insertReplacementText) + clearTextarea — _test, sonnet_
+- [ ] **C-12** (F9e) non-tail replacement → zero bytes (insertText and insertReplacementText) + clearTextarea; tail replacement is prefix-minimal — _test, sonnet_
 - [ ] **C-13** (F9f) backspace counts in grapheme clusters: ZWJ family, flag, e+U+0301 with exact bytes — _test, sonnet_
 - [ ] **C-14** (F9g/h) duplicate-commit guard drops only xterm's pending commit, once; second identical composition is sent — _test, sonnet_
-- [ ] **C-15** e2e: dictation (both modes), predictive, hardware, paste breakout, Ctrl-on-composition, tray Enter/^C clear the textarea — _fixture-test, sonnet_
+- [ ] **C-15** e2e: dictation (both modes, extending and rewriting), predictive, hardware, paste breakout, Ctrl on a composition and on a hardware key (indicator clears), tray Enter/^C clear the textarea, socket drop mid-composition sends no 7f after reopen — _fixture-test, sonnet_
 - [ ] **D-1** Mic: Enter timer fired > 1.5 s late → no Enter, text kept, toast; Mic.tsx uses submitDictation — _test, sonnet_
 - [ ] **D-2** Mic: pane blocked now / gone / status failed → no Enter; blocked at deliver time → text not sent — _test, sonnet_
 - [ ] **D-3** 1008/1013/4503/4500 and N never-opened closes → visible message (with the reason), retry with backoff; terminalSocket uses the policy — _test, sonnet_
 - [ ] **D-4** handshake not open within CONNECT_TIMEOUT_MS → abandoned and retried — _test, sonnet_
 - [ ] **D-5** reconnect while CONNECTING replaces the pending socket — _test, sonnet_
-- [ ] **D-6** e2e: mocked close 1013/4503 shows the message; a never-opening handshake leads to a second socket — _fixture-test, sonnet_
+- [ ] **D-6** e2e: mocked close 1013/4503 shows the message; a never-opening handshake leads to a second socket; Mic into a blocked pane sends nothing, into an idle pane sends text then Enter — _fixture-test, sonnet_
 <!-- /prd:items -->
 
 ### 6.1 Requirement intent
@@ -287,7 +293,7 @@ late-Enter skip toast (lock the phone during the countdown).
 | 3 | Cutover | record → quit each → switch → relaunch where needed → send "resume" | owner | 2026-11-15 |
 | 4 | OSC 52 | keep (agents copy via OSC 52 without a gesture), cap size; paste sanitising closes the exploit | gesture gating breaks agent copy | 2026-11-15 |
 | 5 | Units | both system units, same manager, no hard dependency | ordering only works within one manager | 2026-11-15 |
-| 6 | Builders | Opus per lane; Fable reviewed the PRD | owner | 2026-11-15 |
+| 6 | Builders | Opus per lane; a reviewer checked the PRD | owner | 2026-11-15 |
 | 7 | Backlog | close 1013 above a byte cap instead of pause/resume | no stall, no EOF trap | 2026-11-15 |
 | 8 | Mic "status changed" | narrowed to blocked / gone / fetch failed | most dictations finish a turn within 10 s | 2026-11-15 |
 

@@ -3,10 +3,13 @@
 // composition events inside the window is sent. (The tray Enter/^C textarea clear is the
 // "tray-clear" e2e scenario, run by C-15.)
 import { describe, expect, it } from "vitest";
-import type { ComposerEvent } from "../../src/input/composer";
+import { DUP_WINDOW_MS, type ComposerEvent } from "../../src/input/composer";
 import { composeWord, drive, ev, hex, ta } from "./helpers/composer";
 
 describe("C-14 duplicate commit window", () => {
+  it("DUP_WINDOW_MS leaves room for a late commit (> 400 ms)", () => {
+    expect(DUP_WINDOW_MS).toBeGreaterThan(400);
+  });
   it("second identical composition inside the window is sent (commits never seen)", () => {
     // order: compose "ok", commit timer fires, compose "ok" again 300 ms later, timer fires; no xterm commit onData
     const a = composeWord(0, "", "ok");
@@ -47,7 +50,7 @@ describe("C-14 duplicate commit window", () => {
 
   it("outside the window an identical onData is always sent", () => {
     const a = composeWord(0, "", "ok");
-    const events: ComposerEvent[] = [...a.events, ev.data(a.t + 5000, "ok", "other")];
+    const events: ComposerEvent[] = [...a.events, ev.data(a.t + DUP_WINDOW_MS + 500, "ok", "other")];
     expect(hex(drive(events).send)).toBe(hex("okok"));
   });
 });

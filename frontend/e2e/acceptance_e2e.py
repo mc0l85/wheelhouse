@@ -10,7 +10,8 @@ static server, which holds the upgrade forever (a handshake that never opens).
 
 Pinned page facts (beyond today's DOM): the modifier indicator is `.mod-ind` (shown while Ctrl/Alt
 is armed); the connection message from socketPolicy (which contains the close reason) is visible
-text on the page; toasts are `.toast` (`.toast.bad` for warnings).
+text on the page; toasts are `.toast` (`.toast.bad` for warnings); the Mic button is `button.mic-btn`
+and delivers through POST /api/panes/<id>/send-text and .../send-keys (a fake recognizer is injected).
 Exit 1 if any selected scenario fails.
 """
 import argparse, base64, functools, http.server, json, re, sys, threading, time
@@ -29,12 +30,15 @@ BREAKOUT_CLEAN = "safe[201~rm -rf ~\r[200~"
 IMG_PATH = "/up/e2e\x1b[201~img.png"
 IMG_PATH_CLEAN = "/up/e2e[201~img.png"
 BP0, BP1 = b"\x1b[200~", b"\x1b[201~"
+# a dictation hypothesis that rewrites an earlier word ("lock" -> "look"), not just extends
+REWRITE = ["take", "take a", "take a lock", "take a look at it."]
 
 ITEMS = {
     "C-2": ["paste-native", "paste-ctrlv", "paste-keyboard", "paste-controls", "paste-image", "osc52-cap"],
-    "C-15": ["dictation-insertText", "dictation-composition", "predictive", "hardware", "paste-breakout",
-             "ctrl-composition", "tray-clear"],
-    "D-6": ["close-message", "never-open"],
+    "C-15": ["dictation-insertText", "dictation-composition", "dictation-rewrite-insertText",
+             "dictation-rewrite-composition", "predictive", "hardware", "paste-breakout",
+             "ctrl-composition", "ctrl-key", "tray-clear", "reset-mid-composition"],
+    "D-6": ["close-message", "never-open", "mic-blocked", "mic-enter"],
 }
 
 
@@ -56,6 +60,16 @@ INIT_JS = r"""
     read: async () => [{ types: ["text/plain"], getType: async () => new Blob([window.__clipText], { type: "text/plain" }) }],
   };
   Object.defineProperty(navigator, "clipboard", { value: clip, configurable: true });
+  // Mic: a fake recognizer that hears "e2e dictated words"; a granted, empty microphone.
+  class FakeRec {
+    start() { setTimeout(() => { this.onaudiostart && this.onaudiostart();
+      const r = [{ transcript: "e2e dictated words" }]; r.isFinal = true;
+      this.onresult && this.onresult({ resultIndex: 0, results: [r] }); }, 100); }
+    stop() { setTimeout(() => this.onend && this.onend(), 50); }
+    abort() {}
+  }
+  window.SpeechRecognition = FakeRec; window.webkitSpeechRecognition = FakeRec;
+  if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => ({ getTracks: () => [] });
   const exec = document.execCommand.bind(document);
   document.execCommand = (cmd, ...a) => {
     if (cmd === "copy") { const s = document.getSelection(); window.__clip.push(document.activeElement?.value ?? String(s)); return true; }
@@ -105,6 +119,19 @@ COMPOSE_JS = """async (word) => {
 }"""
 
 
+COMP_STEP_JS = """([kind, data]) => {
+  const ta = document.querySelector('.xterm-helper-textarea'); ta.focus();
+  if (kind === 'start') { ta.value = ''; ta.dispatchEvent(new CompositionEvent('compositionstart', { data: '', bubbles: true })); return; }
+  if (kind === 'update') {
+    ta.dispatchEvent(new CompositionEvent('compositionupdate', { data, bubbles: true }));
+    ta.value = data; ta.setSelectionRange(data.length, data.length);
+    ta.dispatchEvent(new InputEvent('input', { inputType: 'insertCompositionText', data, isComposing: true, bubbles: true }));
+    return;
+  }
+  ta.dispatchEvent(new CompositionEvent('compositionend', { data, bubbles: true }));
+}"""
+
+
 class Holder(http.server.SimpleHTTPRequestHandler):
     """Static files; an un-mocked WebSocket upgrade is counted and held (never answered)."""
     ws_hits: dict = {}
@@ -127,6 +154,24 @@ def serve(dist: Path):
     srv.daemon_threads = True
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv
+
+
+def make_api_route(status="idle", log=None):
+    """Mocked /api with the fixture pane in agent status `status`; requests appended to `log`."""
+    pane = {**FIXTURES["/api/panes"]["panes"][0], "agent_status": status}
+    tree = json.loads(json.dumps(FIXTURES["/api/tree"]))
+    tree["workspaces"][0]["tabs"][0]["panes"] = [pane]
+    over = {"/api/panes": {"panes": [pane]}, "/api/tree": tree, "/api/panes/w1:p1": pane, "/api/panes/w1%3Ap1": pane}
+
+    def route(r):
+        if log is not None:
+            log.append((r.request.method, urlparse(r.request.url).path))
+        path = urlparse(r.request.url).path
+        if path in over:
+            r.fulfill(status=200, body=json.dumps(over[path]), content_type="application/json")
+        else:
+            api_route(r)
+    return route
 
 
 def api_route(route):
@@ -180,7 +225,7 @@ class Term:
         ws.send("\x1b[?2004h".encode())
 
 
-def new_page(browser, base, *, touch=False, term=None, mock_terminal=True):
+def new_page(browser, base, *, touch=False, term=None, mock_terminal=True, api=None):
     ctx = browser.new_context(viewport={"width": 420, "height": 800} if touch else {"width": 1000, "height": 700},
                               has_touch=touch, service_workers="block")
     ctx.add_init_script(INIT_JS)
@@ -188,7 +233,7 @@ def new_page(browser, base, *, touch=False, term=None, mock_terminal=True):
     if mock_terminal:
         pg.route_web_socket("**/api/ws/terminal**", term.handler)
     pg.route_web_socket("**/api/ws/events**", lambda ws: None)
-    pg.route("**/api/**", api_route)
+    pg.route("**/api/**", api or api_route)
     pg.goto(base, wait_until="domcontentloaded")
     pg.wait_for_selector(".xterm-helper-textarea", state="attached", timeout=20000)
     pg.wait_for_timeout(2500)
@@ -236,6 +281,11 @@ def main():
                 raw = bytes_after(desk_term, lambda: dpg.evaluate(DICT_JS, [PHRASES, mode]), 300)
                 got = apply_bs(raw)
                 record(f"dictation-{mode}", got == "take a look at it.", {"text": got, "raw": raw.hex()})
+        for mode in ("insertText", "composition"):
+            if f"dictation-rewrite-{mode}" in wanted:
+                raw = bytes_after(desk_term, lambda: dpg.evaluate(DICT_JS, [REWRITE, mode]), 300)
+                got = apply_bs(raw)
+                record(f"dictation-rewrite-{mode}", got == "take a look at it.", {"text": got, "raw": raw.hex()})
         if "predictive" in wanted:
             raw = bytes_after(desk_term, lambda: dpg.evaluate(PREDICTIVE_JS), 300)
             record("predictive", raw == b"hi there ", {"raw": repr(raw)})
@@ -297,12 +347,17 @@ def main():
         dctx.close()
 
         # ---- C-15: touch keyboards (Controls shows the key rows) ------------------------
-        if "ctrl-composition" in wanted or "tray-clear" in wanted:
+        if "ctrl-composition" in wanted or "ctrl-key" in wanted or "tray-clear" in wanted:
             t_term = Term()
             tctx, tpg = new_page(b, base, touch=True, term=t_term)
 
             def key(label):
                 return tpg.locator("button.kb", has=tpg.locator("span.kl-k", has_text=re.compile(f"^{re.escape(label)}$")))
+
+            def ensure_controls():
+                if tpg.locator(".pop").count() == 0:
+                    tpg.locator("button.trig-ctl").click()
+                    tpg.wait_for_timeout(200)
 
             def ta_value():
                 return tpg.evaluate("() => document.querySelector('.xterm-helper-textarea').value")
@@ -311,16 +366,35 @@ def main():
             if "ctrl-composition" in wanted:
                 key("Ctrl").first.click()
                 tpg.wait_for_timeout(200)
-                armed = tpg.locator(".mod-ind").count() > 0
+                armed = tpg.locator(".mod-ind").first.is_visible()
                 t_term.sent.clear()
                 tpg.evaluate(COMPOSE_JS, "c")
                 tpg.wait_for_timeout(600)
                 raw = bytes(t_term.sent)
-                cleared = tpg.locator(".mod-ind").count() == 0
+                cleared = not tpg.locator(".mod-ind").first.is_visible()
                 record("ctrl-composition", armed and raw == b"\x03" and cleared,
+                       {"indicator_shown": armed, "raw": repr(raw), "indicator_cleared": cleared})
+            if "ctrl-key" in wanted:
+                # soft-key Ctrl once, then a hardware-keyboard "c" (onData from xterm's keydown)
+                tpg.wait_for_timeout(500)
+                if tpg.locator(".mod-ind").first.is_visible():      # start from "off" whatever ran before
+                    tpg.locator(".mod-ind").first.click()
+                    tpg.wait_for_timeout(200)
+                ensure_controls()
+                key("Ctrl").first.click()
+                tpg.wait_for_timeout(200)
+                armed = tpg.locator(".mod-ind").first.is_visible()
+                t_term.sent.clear()
+                tpg.locator(".xterm-helper-textarea").focus()
+                tpg.keyboard.type("c")
+                tpg.wait_for_timeout(500)
+                raw = bytes(t_term.sent)
+                cleared = not tpg.locator(".mod-ind").first.is_visible()
+                record("ctrl-key", armed and raw == b"\x03" and cleared,
                        {"indicator_shown": armed, "raw": repr(raw), "indicator_cleared": cleared})
             if "tray-clear" in wanted:
                 out = {}
+                ensure_controls()
                 for label, want in (("Enter", b"\r"), ("Ctrl+C", b"\x03")):
                     tpg.evaluate(COMPOSE_JS, "abc")
                     before = ta_value()
@@ -357,6 +431,52 @@ def main():
             hits = Holder.ws_hits.get("/api/ws/terminal", 0)
             record("never-open", hits >= 2, {"terminal_handshakes": hits})
             nctx.close()
+        if "reset-mid-composition" in wanted:
+            # the socket drops mid-composition; an update while it is down cannot be sent (send() false);
+            # after the reopen the next correction must not backspace text the new client never got
+            r_term = Term()
+            rctx, rpg = new_page(b, base, term=r_term)
+            rpg.evaluate(COMP_STEP_JS, ["start", ""])
+            rpg.evaluate(COMP_STEP_JS, ["update", "hel"])
+            rpg.wait_for_timeout(300)
+            first = r_term.connections
+            r_term.ws.close(code=1011, reason="e2e drop")
+            rpg.wait_for_timeout(30)
+            rpg.evaluate(COMP_STEP_JS, ["update", "hell"])          # socket down: send() is false
+            end = time.time() + 15
+            while time.time() < end and r_term.connections == first:
+                rpg.wait_for_timeout(100)
+            rpg.wait_for_timeout(500)
+            r_term.sent.clear()
+            rpg.evaluate(COMP_STEP_JS, ["update", "hex"])
+            rpg.evaluate(COMP_STEP_JS, ["end", "hex"])
+            rpg.wait_for_timeout(800)
+            raw = bytes(r_term.sent)
+            reopened = r_term.connections > first
+            record("reset-mid-composition", reopened and b"\x7f" not in raw and b"x" in raw,
+                   {"reopened": reopened, "raw_after_reopen": repr(raw)})
+            rctx.close()
+        for name, status in (("mic-blocked", "blocked"), ("mic-enter", "idle")):
+            if name not in wanted:
+                continue
+            log: list = []
+            m_term = Term()
+            mctx, mpg = new_page(b, base, term=m_term, api=make_api_route(status, log))
+            mpg.locator("button.mic-btn").click()
+            mpg.wait_for_timeout(1800)
+            mpg.locator("button.mic-btn").click()                    # stop: the fake heard words
+            posts = lambda: [pth for m, pth in log if m == "POST"]
+            end = time.time() + (6 if status == "blocked" else 20)
+            while time.time() < end and not any("send-keys" in p_ for p_ in posts()):
+                mpg.wait_for_timeout(250)
+            sent_text = any("send-text" in p_ for p_ in posts())
+            entered = any("send-keys" in p_ for p_ in posts())
+            if status == "blocked":
+                record(name, not sent_text and not entered, {"posts": posts()})
+            else:
+                order = [p_ for p_ in posts() if "send-" in p_]
+                record(name, sent_text and entered and "send-text" in order[0], {"posts": posts()})
+            mctx.close()
         b.close()
     srv.shutdown()
 

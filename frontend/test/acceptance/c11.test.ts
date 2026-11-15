@@ -21,7 +21,7 @@ describe("C-11 composer reset", () => {
     expect(r.steps[fail].send).toBe("");
     const after = sentAfter(r, (e) => e.type === "sendFailed");
     expect(after).not.toContain("\x7f");
-    expect(after.split("help").length - 1).toBeLessThanOrEqual(1);
+    expect(after.split("help").length - 1).toBe(1);
   });
 
   it("the state right after sendFailed / reset is not composing", () => {
@@ -44,6 +44,8 @@ describe("C-11 composer reset", () => {
       ev.end(360, "he", ta("he")),
       ev.data(361, "he", "commit"),
     ]);
-    expect(sentAfter(r, (e) => e.type === "reset")).not.toContain("\x7f");
+    const after = sentAfter(r, (e) => e.type === "reset");
+    expect(after).not.toContain("\x7f");
+    expect(after).toContain("he");
   });
 });

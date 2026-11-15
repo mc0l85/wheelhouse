@@ -1,6 +1,6 @@
 // D-4: a handshake not open within CONNECT_TIMEOUT_MS is abandoned and retried.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CONNECT_TIMEOUT_MS } from "../../src/hooks/socketPolicy";
+import { CONNECT_TIMEOUT_MS, onClose } from "../../src/hooks/socketPolicy";
 import { FakeWS, last, sockRig } from "./helpers/fakeSocket";
 
 describe("D-4 connect timeout", () => {
@@ -14,7 +14,8 @@ describe("D-4 connect timeout", () => {
     vi.advanceTimersByTime(CONNECT_TIMEOUT_MS - 50);
     expect(FakeWS.all).toHaveLength(1);
     expect(first.closedByClient).toBe(false);
-    vi.advanceTimersByTime(50 + 6000);                 // timeout + the longest first backoff
+    const firstBackoff = onClose(1006, "", false, 1).delayMs;   // the policy's first never-opened retry delay
+    vi.advanceTimersByTime(50 + firstBackoff + 10);
     expect(first.closedByClient).toBe(true);
     expect(FakeWS.all.length).toBeGreaterThanOrEqual(2);
     first.open();                                       // a late open of the abandoned socket is ignored

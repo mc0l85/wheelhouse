@@ -2,6 +2,10 @@
 // Pure reducer: no DOM; clock and timers are injected through events and effects.
 import type { ModState } from "../types/term";
 
+/** xterm's commit onData arriving this long after compositionend may still be the duplicate of a
+ *  composition already sent live (dropped once, PRD 4.1); later, an identical onData is always sent. */
+export const DUP_WINDOW_MS = 1500;
+
 export interface TextareaSnapshot { value: string; selStart: number; selEnd: number }
 
 export type DataOrigin = "commit" | "keydownFinalize" | "textareaChange" | "other";

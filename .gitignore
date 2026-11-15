@@ -18,3 +18,6 @@ __pycache__/
 
 # public export
 build/
+
+# acceptance-test venv (backend/tests/make_test_venv.sh)
+backend/.venv-test/
