@@ -32,18 +32,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:44:19-06:00",
         "rc": 1,
         "head": "15f23d7"
-      },
-      "evidence": {
-        "at": "2026-11-15T15:55:32-06:00",
-        "rc": 0,
-        "head": "4398ad6",
-        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a1.py",
-        "tail": "...                                                                      [100%]\n3 passed in 2.10s\n"
       }
     },
     {
@@ -68,18 +61,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "open",
+      "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:44:23-06:00",
+        "at": "2026-11-15T16:21:53-06:00",
         "rc": 1,
-        "head": "15f23d7"
-      },
-      "evidence": {
-        "at": "2026-11-15T15:55:40-06:00",
-        "rc": 1,
-        "head": "4398ad6",
-        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a2.py",
-        "tail": "  raised far above that so this tests exit detection, not the 1013 backlog close (A-5).\"\"\"\n        from app.routers import terminal\n        monkeypatch.setattr(terminal, \"OUT_Q_MAX_BYTES\", 256 << 20)\n        monkeypatch.setenv(\"FAKE_HERDR_FLOOD_BYTES\", str(24 << 20))\n        monkeypatch.setenv(\"FAKE_HERDR_SECONDS\", \"0\")\n        override_settings(herdr_bin=str(FAKES / \"herdr_flood.py\"))\n        ws = open_ws(live_server.url(), max_queue=2)\n        time.sleep(2.5)                      # not reading: the flood is written and the client has exited\n        out = wait_close(ws, 2.0)\n>       assert out.code == 1012, (f\"client exit with output backed up must close 1012 within 2 s of the \"\n                                  f\"browser reading again, got {out.code} {out.reason!r} after {len(out.data)} bytes\")\nE       AssertionError: client exit with output backed up must close 1012 within 2 s of the browser reading again, got None '' after 15692040 bytes\nE       assert None == 1012\nE        +  where None = Outcome(data=b'\\x00\\x00\\x00\\x00\\x04\\x05\\x06\\x07\\x08\\t\\n\\x0b\\x0c\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\...@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmno\\x00\\x00\\xefquvwx', texts=[], code=None, reason='', closed_after=None).code\n\ntests/acceptance/test_a2.py:27: AssertionError\n=========================== short test summary info ============================\nFAILED tests/acceptance/test_a2.py::test_client_exit_while_output_backed_up_closes_1012\n1 failed, 1 passed in 6.71s\n"
+        "head": "ab68095"
       }
     },
     {
@@ -104,18 +90,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:44:26-06:00",
         "rc": 1,
         "head": "15f23d7"
-      },
-      "evidence": {
-        "at": "2026-11-15T15:55:47-06:00",
-        "rc": 0,
-        "head": "4398ad6",
-        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a3.py",
-        "tail": "........                                                                 [100%]\n8 passed in 5.96s\n"
       }
     },
     {
@@ -139,18 +118,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:44:28-06:00",
         "rc": 1,
         "head": "15f23d7"
-      },
-      "evidence": {
-        "at": "2026-11-15T15:55:50-06:00",
-        "rc": 0,
-        "head": "4398ad6",
-        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a4.py",
-        "tail": ".                                                                        [100%]\n1 passed in 0.93s\n"
       }
     },
     {
@@ -174,18 +146,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 400,
-      "status": "open",
+      "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:44:30-06:00",
+        "at": "2026-11-15T16:21:55-06:00",
         "rc": 1,
-        "head": "15f23d7"
-      },
-      "evidence": {
-        "at": "2026-11-15T15:56:27-06:00",
-        "rc": 1,
-        "head": "4398ad6",
-        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a5.py",
-        "tail": "013_and_loses_nothing_silently _________\n\nlive_server = <tests.acceptance.conftest.LiveServer object at 0x7f93f51e4910>\nlive_herdr = <tests.fakes.fake_herdr_api.FakeHerdrApi object at 0x7f93f3808f50>\noverride_settings = <function override_settings.<locals>.apply at 0x7f93f3814220>\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f93f380a050>\n\n    def test_backlog_over_cap_closes_1013_and_loses_nothing_silently(live_server, live_herdr, override_settings, monkeypatch):\n        n = 32 << 20\n        _flood(monkeypatch, override_settings, n, cap=1 << 20)\n        ws = open_ws(live_server.url(), max_queue=2)\n        time.sleep(3.0)                                       # the browser stops reading\n        out = wait_close(ws, 30.0)\n>       assert out.code == 1013, f\"a backlog over the cap must close 1013, got {out.code} {out.reason!r}\"\nE       AssertionError: a backlog over the cap must close 1013, got 1012 'herdr client exited'\nE       assert 1012 == 1013\nE        +  where 1012 = Outcome(data=b'\\x00\\x00\\x00\\x00\\x04\\x05\\x06\\x07\\x08\\t\\n\\x0b\\x0c\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\...f6\\xf7\\xf8\\xf9\\xfa\\xfb\\xfc\\xfd\\xfe', texts=[], code=1012, reason='herdr client exited', closed_after=18.64031445980072).code\n\ntests/acceptance/test_a5.py:42: AssertionError\n=========================== short test summary info ============================\nFAILED tests/acceptance/test_a5.py::test_backlog_over_cap_closes_1013_and_loses_nothing_silently\n1 failed, 2 passed in 35.60s\n"
+        "head": "ab68095"
       }
     },
     {
@@ -209,18 +174,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:44:35-06:00",
         "rc": 1,
         "head": "15f23d7"
-      },
-      "evidence": {
-        "at": "2026-11-15T15:56:32-06:00",
-        "rc": 0,
-        "head": "4398ad6",
-        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a6.py",
-        "tail": ".                                                                        [100%]\n1 passed in 3.95s\n"
       }
     },
     {
@@ -244,18 +202,11 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "done",
+      "status": "red",
       "red_proven": {
         "at": "2026-11-15T15:44:38-06:00",
         "rc": 1,
         "head": "15f23d7"
-      },
-      "evidence": {
-        "at": "2026-11-15T15:56:35-06:00",
-        "rc": 0,
-        "head": "4398ad6",
-        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a7.py",
-        "tail": "..                                                                       [100%]\n2 passed in 1.70s\n"
       }
     },
     {
@@ -279,11 +230,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:48-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:23-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b1.py",
+        "tail": "...                                                                      [100%]\n3 passed in 8.82s\n"
       }
     },
     {
@@ -307,11 +265,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:55-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:29-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b2.py",
+        "tail": "...                                                                      [100%]\n3 passed in 5.97s\n"
       }
     },
     {
@@ -334,11 +299,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:57-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:31-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b3.py",
+        "tail": ".....                                                                    [100%]\n=============================== warnings summary ===============================\n.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /tempfs/hw-lane-b/backend/.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n5 passed, 1 warning in 0.80s\n"
       }
     },
     {
@@ -361,11 +333,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:57-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:32-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b4.py",
+        "tail": "...                                                                      [100%]\n3 passed in 0.03s\n"
       }
     },
     {
@@ -388,11 +367,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:58-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:32-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b5.py",
+        "tail": "...............                                                          [100%]\n15 passed in 0.04s\n"
       }
     },
     {
@@ -428,11 +414,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:45:00-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:34-06:00",
+        "rc": 0,
+        "head": "dfb1f64",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b7.py",
+        "tail": ".........                                                                [100%]\n9 passed in 0.98s\n"
       }
     },
     {
@@ -670,9 +663,9 @@
       "timeout": 300,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:38:21-06:00",
+        "at": "2026-11-15T16:28:32-06:00",
         "rc": 1,
-        "head": "144bb9f"
+        "head": "adcb035"
       }
     },
     {
@@ -759,9 +752,32 @@
       "timeout": 1500,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:39:21-06:00",
+        "at": "2026-11-15T16:29:22-06:00",
         "rc": 1,
-        "head": "144bb9f"
+        "head": "adcb035"
+      }
+    },
+    {
+      "id": "C-16",
+      "title": "e2e exact bytes, real keys: hardware Enter mid-composition \u2192 hel\\r then \\r; dictation \"ok\" + typed \"ok\" \u2192 okok; autocorrect collapsed caret teh\u2192the \u2192 7f 7f he",
+      "phase": "P1",
+      "lane": "C",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_items.sh C-16",
+      "files": [
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/check_items.sh",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1500,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T16:29:42-06:00",
+        "rc": 1,
+        "head": "adcb035"
       }
     },
     {
@@ -900,13 +916,13 @@
   ],
   "lock": {
     "backend/tests/acceptance/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "backend/tests/acceptance/conftest.py": "cec89334cf1d8f88a7d7a278e84d755699924b42633f01b4a3b8c542e3fc6e15",
+    "backend/tests/acceptance/conftest.py": "52e85172c5c987382e338ba48da5188d7040755c4e2466e77c17b5d6c37a3408",
     "backend/tests/acceptance/pushkit.py": "ae3fe883332d234a8b783afaef9a16d97452206a38ec3421cfc4a7106244cf33",
     "backend/tests/acceptance/test_a1.py": "15b4e13884196ca5adaca545ccc88e8627d81f487d2463a635a6a78e49056ab3",
-    "backend/tests/acceptance/test_a2.py": "fc6a1711bc3d648d4ffd062ae9c6d9e40bae47341e1d054ac7fe16e0c10aa1d7",
+    "backend/tests/acceptance/test_a2.py": "7d53d3135ec5e85affecc034d40ab68716d87af3cbc1f4481689cad60c0bd343",
     "backend/tests/acceptance/test_a3.py": "956b72c14a1ff4ec865e17fefce38f6ded58133aaca1a6053a779f97b4852883",
     "backend/tests/acceptance/test_a4.py": "ba247b8c5d27bb4fff2fc873b4bcba6576c607c51c456daddaa741da4c639f72",
-    "backend/tests/acceptance/test_a5.py": "721afd703c52d7599337005c206e10e19f6d06a89c2964ccea33e80d489e900a",
+    "backend/tests/acceptance/test_a5.py": "ca9b99e55cd99a178012548a967a21a9c415f7642f38e8ebf70f7856a3ebb8c2",
     "backend/tests/acceptance/test_a6.py": "edcdfd37bb7ea1bd1cab773b2ba9d08e6eecb394658a59eea3b4a4749d9bb053",
     "backend/tests/acceptance/test_a7.py": "c6568aee8934718c3d8d7a75d740c489d714ea363b1359b80349d7355e2d78ab",
     "backend/tests/acceptance/test_b1.py": "5c486c08b323807959b263be0f70e63c0a27e2d179c6dfffdc8f313636ba96a9",
@@ -920,18 +936,18 @@
     "backend/tests/fakes/fake_herdr_api.py": "c3536da989dae978d1390e5ff2db0f28952d978bbd554732ff68de4413166de8",
     "backend/tests/fakes/herdr_echo.py": "113758c85797e10274356d018694a821a5083dec0aa51095aef29d7d7be130dd",
     "backend/tests/fakes/herdr_exit.py": "0f1b4fcb3f5b4c9c4a512cbc9957d95b43b0581feca2fbdd64153eb48eff42a9",
-    "backend/tests/fakes/herdr_flood.py": "f7a459ec4e454530a3875ad7e259af4fe5912f3935426e2af8d3cac940b6aa5c",
+    "backend/tests/fakes/herdr_flood.py": "c5f4c6f0e6c2143e000942a0f8a0df6d049ae80715c577ecfbb4611be2d12089",
     "backend/tests/fakes/herdr_marker.py": "883ed8f04e088d78dca5d140c058f7b013b57c94efb0fc28d6a916acfedd17f1",
     "backend/tests/fakes/herdr_record.py": "435648e21bb7c79201c3011ac048de157eb17fcd043fa25853d7f328d21ada9e",
     "backend/tests/make_test_venv.sh": "dd4c914eaa2cf4051a5cfc5184c560478441ec3e7469791a5c36dda79e044f61",
     "backend/tests/requirements-test.txt": "b006188eec3f998cf7157fbdc2a7704c06af9ce7f80929f2ed843df9e3465c36",
-    "frontend/e2e/acceptance_e2e.py": "5ac24ebbbfb2383add9b2ea41774592f2cc80fa05040b7390efc47f71542e3f3",
+    "frontend/e2e/acceptance_e2e.py": "e0b23956d94f09473ba149a0287014ede4766ddbec5e3c96c5f2b38c350f4e0c",
     "frontend/e2e/build_remote.sh": "571038def16b416dca18e7c3ddeba17ec5169ea133b6f53e7b2cc165652c577f",
     "frontend/e2e/check_items.sh": "78574112969dea0c12f6583fbee0685e1f03eb9cf044a8a52fff59c0dd6908a4",
     "frontend/e2e/run_e2e.py": "53fb89058dec647826462f9b6aa39fb1df53e9167f3aef8178d72a6e2fb1a8f0",
     "frontend/test/acceptance/c1.test.ts": "d8025107e2e3007f63ec03cd70b0bfa9044625c1eedb08c00062bd1e214a151e",
     "frontend/test/acceptance/c10.test.ts": "666a1e4cd85a9c5bc792d08a4ba0d8ee2dbef9eccdd081922f54c0b84564004b",
-    "frontend/test/acceptance/c11.test.ts": "85df190cb1036b22813819568d587822eb709f629744f8e3711d43344f1e3104",
+    "frontend/test/acceptance/c11.test.ts": "a33f7045555df31ac60da2f965b76e80a667474d5826601d22049aec4976561a",
     "frontend/test/acceptance/c12.test.ts": "c59551e19a2b719acde631b59be14cd8ea204d23eb2fdf160f82f1c0c5e63f0b",
     "frontend/test/acceptance/c13.test.ts": "c448d4833c9d98cd09649445a5e685ba3f35c3d6ffcfe5d6808f5a135ab7f87f",
     "frontend/test/acceptance/c14.test.ts": "23e9b5f99f91b0d546d6685b0793596469fd0e3ea7101a882046091c4158b6e2",
@@ -952,5 +968,5 @@
     "frontend/test/acceptance/helpers/mic.ts": "e1d6977b6ec28eaf4fc36f7e4714820bc6977fbeb30cbf4672943da77f40ed4a",
     "frontend/vitest.config.ts": "0f8e27f84bcbad6fa87a5d452533498974f1623b8d92e6e6bc329370e9904034"
   },
-  "locked_at": "2026-11-15T15:36:35-06:00"
+  "locked_at": "2026-11-15T16:27:20-06:00"
 }
