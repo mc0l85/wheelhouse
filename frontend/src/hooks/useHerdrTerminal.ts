@@ -200,38 +200,21 @@ export function useHerdrTerminal(
       const v = ta.value, s0 = ta.selectionStart ?? v.length, e0 = ta.selectionEnd ?? v.length;
       return s0 < e0 && e0 === v.length ? v.slice(s0, e0) : "";
     };
-    // Input trace (temporary, 2026-11-15): textarea events + what was sent, so
-    // the next phone dictation shows the real event sequence. GET /api/debug/input.
-    let traceBuf: object[] = [], traceTimer = 0;
-    const trace = (ev: string, extra: Record<string, unknown> = {}) => {
-      traceBuf.push({ t: Math.round(performance.now()), ev, ...extra,
-        ss: ta?.selectionStart, se: ta?.selectionEnd, tail: ta ? ta.value.slice(-60) : null });
-      if (traceBuf.length > 400) traceBuf = traceBuf.slice(-400);
-      if (!traceTimer) traceTimer = window.setTimeout(() => {
-        traceTimer = 0;
-        const batch = traceBuf; traceBuf = [];
-        void fetch("/api/debug/input", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ events: batch }) }).catch(() => {});
-      }, 1000);
-    };
     let replPending: { before: string; s0: number; e0: number } | null = null;
     const onBeforeInput = (e: InputEvent) => {
-      trace("beforeinput", { inputType: e.inputType, data: e.data, composing: e.isComposing });
       if (!ta || e.isComposing) return;
       if (e.inputType !== "insertText" && e.inputType !== "insertReplacementText") return;
       const gone = tailSelection();
-      if (gone) { raw("\x7f".repeat(Array.from(gone).length)); trace("sent", { del: Array.from(gone).length }); }
+      if (gone) raw("\x7f".repeat(Array.from(gone).length));
       // xterm only sends insertText's data; a replacement's text is read back after the input lands.
       if (e.inputType === "insertReplacementText")
         replPending = { before: ta.value, s0: ta.selectionStart ?? 0, e0: ta.selectionEnd ?? 0 };
     };
-    const onInput = (e: Event) => {
-      const ie = e as InputEvent;
-      trace("input", { inputType: ie.inputType, data: ie.data, composing: ie.isComposing });
+    const onInput = () => {
       if (!ta || !replPending) return;
       const { before, s0, e0 } = replPending; replPending = null;
       const ins = ta.value.slice(s0, ta.value.length - (before.length - e0));
-      if (ins) { raw(ins); trace("sent", { text: ins }); }
+      if (ins) raw(ins);
     };
     const sendDiff = (from: string, to: string) => {
       const a = Array.from(from), b = Array.from(to);
@@ -251,22 +234,18 @@ export function useHerdrTerminal(
     const onCompStart = () => {
       if (compTimer) finishComp(compFinal);
       comp = tailSelection();
-      trace("compositionstart", { base: comp });
     };
     const onCompUpdate = (e: CompositionEvent) => {
-      trace("compositionupdate", { data: e.data });
       if (comp === null) comp = "";
       sendDiff(comp, e.data ?? "");
       comp = e.data ?? "";
     };
     const onCompEnd = (e: CompositionEvent) => {
-      trace("compositionend", { data: e.data });
       compFinal = e.data ?? comp ?? "";
       clearTimeout(compTimer);
       compTimer = window.setTimeout(() => finishComp(compFinal), 150);
     };
     const onKeystroke = (d: string) => {
-      trace("onData", { data: d.length > 80 ? d.slice(0, 80) + "…" : d });
       if (compTimer) {
         if (d === compFinal) { finishComp(d); return; }   // xterm's commit: already sent
         finishComp(compFinal);
@@ -624,7 +603,6 @@ export function useHerdrTerminal(
       host.removeEventListener("touchmove", onTouchMove);
       dataSub.dispose();
       clearTimeout(compTimer);
-      clearTimeout(traceTimer);
       ta?.removeEventListener("beforeinput", onBeforeInput as EventListener, true);
       ta?.removeEventListener("input", onInput, true);
       ta?.removeEventListener("compositionstart", onCompStart);
