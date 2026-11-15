@@ -18,6 +18,9 @@ import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { clipboardImage, readClipboard } from "../paste";
 import { restyleGhost, resetGhost } from "../dim";
+import type { ConnInfo, ModState, TermApi } from "../types/term";
+import { createTrace, TRACE } from "../input/trace";
+import { createTerminalSocket } from "./terminalSocket";
 
 // Clipboard write that survives non-gesture / insecure-context callers: async
 // Clipboard API first, then a synchronous hidden-textarea execCommand fallback.
@@ -50,19 +53,7 @@ const IMAGE_FILE_RE = /^(file:\/\/)?\S+\.(png|jpe?g|gif|webp)$/i;
 
 const MOUSE_RE =/\x1b\[\?(1000|1001|1002|1003|1005|1006|1015|1016)[hl]/g;
 
-export interface TermApi {
-  type: (s: string) => void;          // raw text/sequence
-  ctrlCombo: (letter: string) => void; // e.g. "c" → ^C
-  toggleCtrl: () => boolean;          // sticky; returns new armed state
-  toggleAlt: () => boolean;
-  focus: () => void;                  // pop the soft keyboard
-  paste: (text: string) => void;      // bracketed paste into the PTY
-  armed: () => { ctrl: boolean; alt: boolean };
-  scrollToBottom: (rect: { x: number; y: number; width: number; height: number }, lines: number) => void;
-  fontStep: (delta: number) => number;  // ±px, clamped + remembered; returns new size
-  fontSize: () => number;
-  redraw: () => void;                  // save a glitch report, reconnect = full repaint
-}
+export type { TermApi, ModState, ConnInfo, ConnState } from "../types/term";
 
 const RING = 256 * 1024;   // bytes of output kept for a glitch report (matches the backend)
 function b64(bytes: Uint8Array): string {
@@ -97,12 +88,10 @@ export function setRendererPref(r: Renderer) {
 // full redraw), so it is the failable check for layout/focus regressions.
 export const termStats = { ptyResizes: 0 };
 
-export type ConnState = "connecting" | "open" | "reconnecting" | "restored";
-
 export function useHerdrTerminal(
   session: string, interactive: boolean, mouseToHerdr: boolean,
   onCopied?: (chars: number) => void,
-  onConn?: (s: ConnState) => void,
+  onConn?: (info: ConnInfo) => void,
   onPasteImage?: (img: Blob) => void,
   onNote?: (msg: string, bad?: boolean) => void,
 ) {
@@ -162,13 +151,14 @@ export function useHerdrTerminal(
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const enc = new TextEncoder();
     let dec = new TextDecoder();
-    let ws: WebSocket | null = null;
     let disposed = false;
     let lastDims = "";
     const armed = { ctrl: false, alt: false };
+    // Today's sticky modifier is a lock: armed maps to "locked" (three-state API, neutral mapping).
+    const modOf = (b: boolean): ModState => (b ? "locked" : "off");
 
     const raw = (s: string) => {
-      if (interactiveRef.current && ws && ws.readyState === WebSocket.OPEN) ws.send(enc.encode(s));
+      if (interactiveRef.current) socket.send(enc.encode(s));
     };
     const ctrlOf = (ch: string) => {
       const c = ch.toLowerCase().charCodeAt(0);
@@ -200,21 +190,25 @@ export function useHerdrTerminal(
       const v = ta.value, s0 = ta.selectionStart ?? v.length, e0 = ta.selectionEnd ?? v.length;
       return s0 < e0 && e0 === v.length ? v.slice(s0, e0) : "";
     };
+    const trace = createTrace(ta);   // no-op unless built with VITE_INPUT_TRACE=1
     let replPending: { before: string; s0: number; e0: number } | null = null;
     const onBeforeInput = (e: InputEvent) => {
+      if (TRACE) trace("beforeinput", { inputType: e.inputType, data: e.data, composing: e.isComposing });
       if (!ta || e.isComposing) return;
       if (e.inputType !== "insertText" && e.inputType !== "insertReplacementText") return;
       const gone = tailSelection();
-      if (gone) raw("\x7f".repeat(Array.from(gone).length));
+      if (gone) { raw("\x7f".repeat(Array.from(gone).length)); if (TRACE) trace("sent", { del: Array.from(gone).length }); }
       // xterm only sends insertText's data; a replacement's text is read back after the input lands.
       if (e.inputType === "insertReplacementText")
         replPending = { before: ta.value, s0: ta.selectionStart ?? 0, e0: ta.selectionEnd ?? 0 };
     };
-    const onInput = () => {
+    const onInput = (e: Event) => {
+      const ie = e as InputEvent;
+      if (TRACE) trace("input", { inputType: ie.inputType, data: ie.data, composing: ie.isComposing });
       if (!ta || !replPending) return;
       const { before, s0, e0 } = replPending; replPending = null;
       const ins = ta.value.slice(s0, ta.value.length - (before.length - e0));
-      if (ins) raw(ins);
+      if (ins) { raw(ins); if (TRACE) trace("sent", { text: ins }); }
     };
     const sendDiff = (from: string, to: string) => {
       const a = Array.from(from), b = Array.from(to);
@@ -234,18 +228,22 @@ export function useHerdrTerminal(
     const onCompStart = () => {
       if (compTimer) finishComp(compFinal);
       comp = tailSelection();
+      if (TRACE) trace("compositionstart", { base: comp });
     };
     const onCompUpdate = (e: CompositionEvent) => {
+      if (TRACE) trace("compositionupdate", { data: e.data });
       if (comp === null) comp = "";
       sendDiff(comp, e.data ?? "");
       comp = e.data ?? "";
     };
     const onCompEnd = (e: CompositionEvent) => {
+      if (TRACE) trace("compositionend", { data: e.data });
       compFinal = e.data ?? comp ?? "";
       clearTimeout(compTimer);
       compTimer = window.setTimeout(() => finishComp(compFinal), 150);
     };
     const onKeystroke = (d: string) => {
+      if (TRACE) trace("onData", { data: d.length > 80 ? d.slice(0, 80) + "…" : d });
       if (compTimer) {
         if (d === compFinal) { finishComp(d); return; }   // xterm's commit: already sent
         finishComp(compFinal);
@@ -317,7 +315,7 @@ export function useHerdrTerminal(
         if (plain) term.paste(plain); else raw("\x16");
         return;
       }
-      if (up && navigator.clipboard?.read && (!plain.trim() || IMAGE_FILE_RE.test(plain.trim()))) {
+      if (up && typeof navigator.clipboard?.read === "function" && (!plain.trim() || IMAGE_FILE_RE.test(plain.trim()))) {
         e.preventDefault(); e.stopPropagation();
         void readClipboard().then(({ image, text }) => {
           if (image) up(image); else if (text || plain) term.paste(text || plain); else empty();
@@ -336,9 +334,9 @@ export function useHerdrTerminal(
       const dims = `${term.rows}x${term.cols}`;
       if (dims === lastDims) return;
       lastDims = dims;
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (socket.isOpen()) {
         termStats.ptyResizes++;
-        ws.send(JSON.stringify({ type: "resize", rows: term.rows, cols: term.cols }));
+        socket.sendJson({ type: "resize", rows: term.rows, cols: term.cols });
       }
     };
     // The soft keyboard animation fires ~10 viewport resizes; collapse them.
@@ -347,51 +345,33 @@ export function useHerdrTerminal(
       clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(sendResize, 100);
     };
-    // --- connection lifecycle: auto-reconnect + heartbeat -------------------
-    // herdr is a persistent server, so a fresh client re-attaches and redraws the
-    // whole screen; nothing is lost by reconnecting. Sockets die silently when
-    // iOS suspends the PWA or a VPN re-keys, so a heartbeat detects zombies.
-    let retry = 0;
-    let retryTimer = 0;
-    let pingTimer = 0;
-    let pongDeadline = 0;
-    let everOpened = false;
+    // --- connection lifecycle lives in terminalSocket.ts ----------------------
     let ring: Uint8Array[] = [], ringLen = 0;       // what this socket received
-    const PING_MS = 15000, PONG_WAIT_MS = 5000;
-
-    const sendPing = (waitMs = PONG_WAIT_MS) => {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      try { ws.send(JSON.stringify({ type: "ping" })); } catch { /* close handler retries */ }
-      clearTimeout(pongDeadline);
-      pongDeadline = window.setTimeout(abandon, waitMs);   // no pong → zombie
-    };
-    // A zombie never completes the close handshake, so onclose may not fire for
-    // minutes: detach it, drop it, and reconnect now.
-    function abandon() {
-      const dead = ws;
-      if (!dead) return;
-      ws = null;
-      dead.onclose = null; dead.onmessage = null; dead.onopen = null;
-      try { dead.close(); } catch { /* already gone */ }
-      clearInterval(pingTimer); clearTimeout(pongDeadline);
-      if (!disposed) { term.reset(); scheduleReconnect(); }
-    }
-    const scheduleReconnect = (delay?: number) => {
-      if (disposed) return;
-      clearTimeout(retryTimer);
-      const d = delay ?? Math.min(250 * 2 ** retry, 5000);
-      retry++;
-      connRef.current?.("reconnecting");
-      retryTimer = window.setTimeout(connect, d);
-    };
-    const reconnectNow = () => {
-      if (disposed) return;
-      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
-        retry = 0; scheduleReconnect(0);
-      } else if (ws.readyState === WebSocket.OPEN) {
-        sendPing(3000);   // back from background: prove the socket is alive, fast
-      }
-    };
+    const socket = createTerminalSocket({
+      beforeConnect: () => {
+        try { fit.fit(); } catch { /* ignore */ }
+        lastDims = `${term.rows}x${term.cols}`;
+      },
+      url: () => `${proto}://${location.host}/api/ws/terminal?rows=${term.rows}&cols=${term.cols}`,
+      onConn: (info) => connRef.current?.(info),
+      onData: (bytes) => {
+        ring.push(bytes); ringLen += bytes.length;
+        while (ringLen - ring[0].length > RING) ringLen -= ring.shift()!.length;
+        const s = restyleGhost(dec.decode(bytes, { stream: true }));
+        term.write(mouseToHerdr ? s : s.replace(MOUSE_RE, ""));
+      },
+      onReset: (reopened) => {
+        ring = []; ringLen = 0;
+        resetGhost();
+        if (reopened) dec = new TextDecoder();
+      },
+      onOpen: () => {
+        lastDims = "";
+        sendResize();
+      },
+      onLost: () => term.reset(),
+    });
+    const reconnectNow = () => socket.reconnectNow();
 
     const onVisible = () => {
       if (document.hidden) return;
@@ -399,65 +379,6 @@ export function useHerdrTerminal(
       sendResize();      // diff-guarded: a wake must not resize everyone's herdr
       term.focus();
     };
-
-    function connect() {
-      if (disposed) return;
-      try { fit.fit(); } catch { /* ignore */ }
-      lastDims = `${term.rows}x${term.cols}`;
-      connRef.current?.(everOpened ? "reconnecting" : "connecting");
-      // Exactly one socket per terminal. The first connect runs from
-      // requestAnimationFrame, which a background tab holds back, while
-      // pageshow/online can schedule another; any older socket left open is a
-      // second herdr client whose diffs interleave with this one's in the same
-      // xterm (ghost text that never clears, SGR tails like "5;49m" as text).
-      clearTimeout(retryTimer);
-      if (ws) {
-        const old = ws;
-        old.onmessage = null; old.onopen = null; old.onclose = null;
-        try { old.close(); } catch { /* already gone */ }
-      }
-      const sock = new WebSocket(
-        `${proto}://${location.host}/api/ws/terminal` +
-        `?rows=${term.rows}&cols=${term.cols}`,
-      );
-      ws = sock;
-      sock.binaryType = "arraybuffer";
-      sock.onmessage = (ev) => {
-        if (ws !== sock) return;                     // superseded socket
-        if (typeof ev.data === "string") {          // server text frames are control only
-          if (ev.data.includes('"pong"')) clearTimeout(pongDeadline);
-          return;
-        }
-        clearTimeout(pongDeadline);                  // any output proves liveness
-        const bytes = new Uint8Array(ev.data);
-        ring.push(bytes); ringLen += bytes.length;
-        while (ringLen - ring[0].length > RING) ringLen -= ring.shift()!.length;
-        const s = restyleGhost(dec.decode(bytes, { stream: true }));
-        term.write(mouseToHerdr ? s : s.replace(MOUSE_RE, ""));
-      };
-      sock.onopen = () => {
-        if (ws !== sock) return;
-        ring = []; ringLen = 0;
-        resetGhost();
-        if (everOpened) { dec = new TextDecoder(); connRef.current?.("restored"); }
-        everOpened = true;
-        retry = 0;
-        connRef.current?.("open");
-        lastDims = "";
-        sendResize();
-        clearInterval(pingTimer);
-        pingTimer = window.setInterval(() => sendPing(), PING_MS);
-      };
-      sock.onclose = () => {
-        if (ws !== sock) return;                     // superseded socket
-        clearInterval(pingTimer); clearTimeout(pongDeadline);
-        if (!disposed) {
-          // herdr's re-attach repaints everything; clear stale modes first.
-          term.reset();
-          scheduleReconnect();
-        }
-      };
-    }
 
     const dataSub = term.onData(onKeystroke);
     ta?.addEventListener("beforeinput", onBeforeInput as EventListener, true);
@@ -494,11 +415,11 @@ export function useHerdrTerminal(
     apiRef.current = {
       type: (s) => raw(s),
       ctrlCombo: (letter) => raw(ctrlOf(letter)),
-      toggleCtrl: () => { armed.ctrl = !armed.ctrl; if (armed.ctrl) armed.alt = false; term.focus(); return armed.ctrl; },
-      toggleAlt: () => { armed.alt = !armed.alt; if (armed.alt) armed.ctrl = false; term.focus(); return armed.alt; },
+      toggleCtrl: () => { armed.ctrl = !armed.ctrl; if (armed.ctrl) armed.alt = false; term.focus(); return modOf(armed.ctrl); },
+      toggleAlt: () => { armed.alt = !armed.alt; if (armed.alt) armed.ctrl = false; term.focus(); return modOf(armed.alt); },
       focus: () => term.focus(),
       paste: (text) => { if (interactiveRef.current) term.paste(text); },
-      armed: () => ({ ...armed }),
+      armed: () => ({ ctrl: modOf(armed.ctrl), alt: modOf(armed.alt) }),
       // Scroll the pane whose cell rect is given (herdr layout cells) to the
       // bottom of its scrollback: one wheel-down per 3 lines, aimed at its centre.
       scrollToBottom: (rect, lines) => {
@@ -519,14 +440,14 @@ export function useHerdrTerminal(
       // it beside what herdr sent), then drop the socket. The reconnect is a
       // fresh herdr client, which repaints everything; other clients are untouched.
       redraw: () => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        if (socket.isOpen()) {
           const all = new Uint8Array(ringLen);
           let o = 0;
           for (const c of ring) { all.set(c, o); o += c.length; }
-          try { ws.send(JSON.stringify({ type: "glitch", client: b64(all.subarray(Math.max(0, all.length - RING))) })); } catch { /* reconnect anyway */ }
+          try { socket.sendJson({ type: "glitch", client: b64(all.subarray(Math.max(0, all.length - RING))) }); } catch { /* reconnect anyway */ }
         }
-        const dead = ws;
-        window.setTimeout(() => { if (ws === dead) { retry = 0; abandon(); } }, 300);
+        const dead = socket.current();
+        window.setTimeout(() => { if (socket.current() === dead) socket.abandon(true); }, 300);
       },
     };
 
@@ -577,7 +498,7 @@ export function useHerdrTerminal(
     window.addEventListener("focus", onVisible);
     window.addEventListener("online", reconnectNow);
     window.addEventListener("pageshow", reconnectNow);
-    const rafId = requestAnimationFrame(() => connect());
+    const rafId = requestAnimationFrame(() => socket.connect());
     if (document.fonts?.ready) document.fonts.ready.then(() => sendResize());
     // A font file that lands after the terminal opened (the 3 s preload cap in
     // main.tsx, or a unicode-range subset like latin-ext fetched the first time
@@ -591,7 +512,6 @@ export function useHerdrTerminal(
     return () => {
       disposed = true;
       clearTimeout(t1); clearTimeout(t2); clearTimeout(resizeTimer);
-      clearTimeout(retryTimer); clearInterval(pingTimer); clearTimeout(pongDeadline);
       window.removeEventListener("online", reconnectNow);
       window.removeEventListener("pageshow", reconnectNow);
       cancelAnimationFrame(rafId);
@@ -603,6 +523,7 @@ export function useHerdrTerminal(
       host.removeEventListener("touchmove", onTouchMove);
       dataSub.dispose();
       clearTimeout(compTimer);
+      trace.dispose();
       ta?.removeEventListener("beforeinput", onBeforeInput as EventListener, true);
       ta?.removeEventListener("input", onInput, true);
       ta?.removeEventListener("compositionstart", onCompStart);
@@ -611,7 +532,7 @@ export function useHerdrTerminal(
       oscSub.dispose();
       host.removeEventListener("mouseup", onMouseUp);
       host.removeEventListener("paste", onPaste, true);
-      ws?.close();
+      socket.dispose();
       term.dispose();
       apiRef.current = null;
     };

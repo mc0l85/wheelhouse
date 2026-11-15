@@ -7,8 +7,9 @@ import { Mic } from "./components/Mic";
 import { ArrowRow, ComboRow, KeyRow, type Mods, noBlur, ShortcutRow } from "./components/Keys";
 import { PaneSelector, paneName } from "./components/PaneSelector";
 import { type HerdrEvent, useHerdrEvents } from "./hooks/useHerdrEvents";
-import { type ConnState, copyText, useHerdrTerminal } from "./hooks/useHerdrTerminal";
+import { copyText, useHerdrTerminal } from "./hooks/useHerdrTerminal";
 import { pasteImage, readClipboard } from "./paste";
+import type { ConnInfo, ConnState } from "./types/term";
 
 // herdr renders its own workspace/tab/pane chrome inside the TUI, so the page is
 // one slim bar (pane selector · Controls) over a full-bleed live herdr terminal.
@@ -46,7 +47,8 @@ export default function App() {
 
   const session = health?.session ?? "default";
   const interactive = !!health?.writes_enabled;
-  const onConn = useCallback((s: ConnState) => {
+  const onConn = useCallback((info: ConnInfo) => {
+    const s = info.state;
     if (s === "restored") { flash("reconnected ✓"); setConn("open"); } else setConn(s);
   }, [flash]);
   const onPasteImage = useCallback((img: Blob) => {

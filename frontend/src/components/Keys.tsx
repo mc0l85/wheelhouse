@@ -71,7 +71,7 @@ export function ShortcutRow({ api }: { api: Api }) {
 
 function syncMods(api: Api, setMods: (m: Mods) => void) {
   const a = api.current?.armed();
-  if (a) setMods(a);
+  if (a) setMods({ ctrl: a.ctrl !== "off", alt: a.alt !== "off" });
 }
 
 interface KeysProps { api: Api; mods: Mods; setMods: (m: Mods) => void; }
