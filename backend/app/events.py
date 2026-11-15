@@ -78,6 +78,7 @@ class Hub:
             self._task = asyncio.get_running_loop().create_task(self._run())
 
     async def stop(self) -> None:
+        notifier.cancel_pending()
         if self._task:
             self._task.cancel()
             self._task = None

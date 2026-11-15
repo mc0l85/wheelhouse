@@ -1,6 +1,6 @@
 # System unit for the herdr server, installed by deploy/install.sh as
 # /etc/systemd/system/herdr.service (@HERDR_BIN@, @SERVICE_USER@, @SERVICE_GROUP@,
-# @SERVICE_HOME@ are filled in). herdr-web wants this unit but never requires it,
+# @SERVICE_HOME@, @SERVICE_UID@ are filled in). herdr-web wants this unit but never requires it,
 # so restarting either one leaves the other running.
 [Unit]
 Description=herdr server (terminal workspace)
@@ -14,6 +14,8 @@ Group=@SERVICE_GROUP@
 Environment=HOME=@SERVICE_HOME@
 Environment=PATH=@SERVICE_HOME@/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=SHELL=/bin/bash
+# The user's runtime dir exists only while the user is lingering (loginctl enable-linger).
+Environment=XDG_RUNTIME_DIR=/run/user/@SERVICE_UID@
 Environment=LANG=C
 Environment=LC_CTYPE=C.UTF-8
 WorkingDirectory=@SERVICE_HOME@

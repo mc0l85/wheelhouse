@@ -79,3 +79,13 @@ No login, by design (see docs/NETWORKING.md). The defenses that remain:
 
 Known limit: resize frames are accepted in read-only mode too, and herdr has one
 size per session, so a read-only viewer can still change everyone's geometry.
+
+## Deployment units
+
+herdr's server and herdr-web are two independent system units (`herdr.service`,
+`herdr-web.service`, installed by `deploy/install.sh`). The web unit only
+`Wants=`/`After=` the server unit, so restarting the web app never restarts the
+herdr server or the panes it holds. Push de-duplication state (`notified.json`
+under the state directory) survives a web restart, so panes that were already
+announced and are still blocked are not pushed again. See
+[NETWORKING.md](NETWORKING.md#running-as-system-services).

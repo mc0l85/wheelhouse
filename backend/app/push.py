@@ -209,15 +209,52 @@ class Notifier:
     """
 
     def __init__(self) -> None:
-        self.notified: set[str] = set()
+        self.notified: set[str] = self._load_notified()
         self.pending: dict[str, asyncio.Task] = {}
+
+    # `notified` survives a restart, so a web restart does not re-push panes
+    # that were already announced and are still blocked.
+    @staticmethod
+    def _notified_path() -> Path:
+        return _state() / "notified.json"
+
+    def _load_notified(self) -> set[str]:
+        try:
+            data = json.loads(self._notified_path().read_text())
+            return {x for x in data if isinstance(x, str)} if isinstance(data, list) else set()
+        except Exception:                 # missing, unreadable or corrupt: start empty
+            return set()
+
+    def _persist(self) -> None:
+        try:
+            _write_private(self._notified_path(), json.dumps(sorted(self.notified)).encode())
+        except Exception as e:
+            log.warning("push: could not save notified set: %s", e)
+
+    def _mark(self, pane_id: str) -> None:
+        if pane_id not in self.notified:
+            self.notified.add(pane_id)
+            self._persist()
+
+    def _unmark(self, pane_id: str) -> None:
+        if pane_id in self.notified:
+            self.notified.discard(pane_id)
+            self._persist()
+
+    def cancel_pending(self) -> None:
+        for t in list(self.pending.values()):
+            t.cancel()
+        self.pending.clear()
 
     def reconcile(self, panes: list[dict]) -> None:
         """Run on every (re)subscribe with a fresh pane.list: a pane that went
         blocked while the stream was down produced no event, so treat each
         blocked pane as a status event; forget panes that are gone or not blocked."""
         live = {p.get("pane_id") for p in panes}
-        self.notified &= live
+        gone = self.notified - live
+        if gone:
+            self.notified -= gone
+            self._persist()
         for p in panes:
             pid = p.get("pane_id")
             if pid:
@@ -227,11 +264,18 @@ class Notifier:
         if not pane_id:
             return
         if status != "blocked":
-            self.notified.discard(pane_id)
+            self._unmark(pane_id)
             return
         if pane_id in self.notified or pane_id in self.pending or not count():
             return
-        self.pending[pane_id] = asyncio.get_running_loop().create_task(self._confirm_and_send(pane_id))
+        task = asyncio.get_running_loop().create_task(self._confirm_and_send(pane_id))
+        self.pending[pane_id] = task
+        task.add_done_callback(self._done)
+
+    @staticmethod
+    def _done(task: asyncio.Task) -> None:
+        if not task.cancelled() and task.exception() is not None:   # retrieve it: never "never retrieved"
+            log.error("push confirm task failed: %r", task.exception())
 
     async def _confirm_and_send(self, pane_id: str) -> None:
         try:
@@ -242,9 +286,9 @@ class Notifier:
                 log.warning("push: could not re-read %s: %s", pane_id, e)
                 return
             if not still:
-                self.notified.discard(pane_id)
+                self._unmark(pane_id)
                 return
-            self.notified.add(pane_id)
+            self._mark(pane_id)
             body = "An agent is waiting for you" if settings.push_private else f"{label} needs you"
             payload = {"title": "Agent blocked", "body": body, "pane_id": pane_id, "blocked": n}
             r = await asyncio.to_thread(send_all, payload)

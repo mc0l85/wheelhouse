@@ -35,17 +35,17 @@ if settings.cors_origins:
 def host_only(value: str) -> str:
     """Hostname from a Host header, lowercased: `name`, `name:port`, `[v6]`, `[v6]:port`.
     Starlette's own parsing splits on the first ':' and mangles bracketed IPv6.
-    A malformed value (junk after the closing bracket) comes back unchanged, so it
-    matches nothing."""
+    A malformed bracket form returns "" and so matches nothing. Allowlist entries
+    are compared without a port: `example.com` allows `example.com:8443` too."""
     v = value.strip().lower()
     if v.startswith("["):
         end = v.find("]")
         if end == -1:
-            return v
+            return ""
         rest = v[end + 1:]
         if rest == "" or (rest[0] == ":" and rest[1:].isdigit()):
             return v[1:end]
-        return v
+        return ""
     return v.split(":")[0]
 
 

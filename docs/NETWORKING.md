@@ -27,6 +27,10 @@ Whatever you choose, add the host name (or address) your phone will type to
 HERDRWEB_ALLOWED_HOSTS=localhost,127.0.0.1,wheelhouse.example.com
 ```
 
+Entries are matched against the Host header **without its port**: `wheelhouse.example.com`
+also allows `wheelhouse.example.com:8443`. Bracketed IPv6 (`[::1]`, `[::1]:8086`) is
+understood, and `*.example.com` allows any subdomain.
+
 ## A1. Tailscale (simplest)
 
 1. Install Tailscale on the herdr machine and on the phone; sign both into the
@@ -139,3 +143,21 @@ HERDRWEB_ALLOWED_ORIGINS=https://wheelhouse.example.com
 - In the home-screen app: Controls › Notifications › Turn on, then **Send test (5 s)**
   and lock the phone. `GET /api/push/receipts` shows `"shown": true` once the
   notification has reached the phone's screen.
+
+## Running as system services
+
+`deploy/install.sh` installs two system units in `/etc/systemd/system`, running as
+`<user>` (override with `SERVICE_USER` / `SERVICE_GROUP`):
+
+- `herdr.service` runs `<herdr> server` (the default session) with a clean,
+  explicit environment, `Restart=always`, `KillMode=mixed`, `OOMPolicy=continue`
+  and `TasksMax=infinity`. It sets `XDG_RUNTIME_DIR=/run/user/<uid>`, which only
+  exists while the user lingers: run `sudo loginctl enable-linger <user>` once.
+- `herdr-web.service` reads `/home/<user>/.config/herdr-web/env` and has
+  `Wants=`/`After=` on `herdr.service`. There is no hard dependency, so either
+  can be restarted without taking down the other.
+
+After editing the env file: `sudo systemctl restart herdr-web`. Logs:
+`sudo journalctl -u herdr-web -u herdr`. The installer refuses a non-default
+`HERDR_SESSION` / `HERDR_HOME` in the env file, and refuses to run while a
+`herdr server` started by hand is alive for that user.
