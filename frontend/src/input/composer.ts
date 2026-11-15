@@ -62,6 +62,8 @@ export interface ComposerState {
   clearOnInput: boolean;
   /** A socket reset abandoned the composition in progress: send nothing more for it until the next compositionstart. */
   abandoned: "live" | "ended" | null;
+  /** Between compositionstart and compositionend (survives sendFailed, which forgets `comp`). */
+  inComp: boolean;
 }
 
 export interface ComposerResult {
@@ -74,7 +76,7 @@ export function initialComposerState(): ComposerState {
   return {
     comp: null, compFinal: "", lastCommit: "", lastCommitAt: 0, replPending: null,
     ctrl: "off", alt: "off", timerArmed: false, expected: "", lastExpected: "", startLen: 0, startVal: null,
-    lead: null, adopt: null, suppress: null, clearOnInput: false, abandoned: null,
+    lead: null, adopt: null, suppress: null, clearOnInput: false, abandoned: null, inComp: false,
   };
 }
 
@@ -171,7 +173,7 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
         ...s, comp: tailSel(event.ta), lead: null, adopt: null, suppress: null, replPending: null,
         ctrl: event.mods.ctrl, alt: event.mods.alt, startLen: event.ta.value.length,
         startVal: event.ta.selStart === event.ta.selEnd && event.ta.selEnd === event.ta.value.length ? event.ta.value : null,
-        lastCommit: "", lastExpected: "", expected: "", clearOnInput: false, abandoned: null,
+        lastCommit: "", lastExpected: "", expected: "", clearOnInput: false, abandoned: null, inComp: true,
       }, send);
     }
 
@@ -200,10 +202,10 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       if (s.abandoned) return done({ ...s, abandoned: "ended" });
       let send = "";
       if (s.adopt) { const r = resolveAdopt(s, effects); s = r.state; send = r.send; }
-      if (s.comp === null) return done(s, send);   // already finalized (keydown) or reset: nothing to settle
+      if (s.comp === null) return done({ ...s, inComp: false }, send);   // already finalized (keydown) or reset: nothing to settle
       const compFinal = event.data;
       effects.push({ type: "setTimer", id: COMMIT_TIMER, ms: COMMIT_WAIT_MS });
-      return done({ ...s, compFinal, timerArmed: true, expected: event.ta.value.substring(s.startLen) }, send);
+      return done({ ...s, compFinal, timerArmed: true, inComp: false, expected: event.ta.value.substring(s.startLen) }, send);
     }
 
     case "beforeinput": {
@@ -306,9 +308,10 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       if (s.timerArmed) effects.push({ type: "cancelTimer", id: COMMIT_TIMER });
       if (s.suppress !== null) effects.push({ type: "cancelTimer", id: SUPPRESS_TIMER });
       // reset: a composition in progress (or just ended, commit pending) is abandoned.
-      const abandoned = event.type === "reset" && (s.comp !== null || s.timerArmed || s.adopt !== null)
+      const abandoned = event.type === "reset" && (s.inComp || s.comp !== null || s.timerArmed || s.adopt !== null)
         ? (s.timerArmed ? "ended" : "live") : null;
-      return done({ ...initialComposerState(), startLen: s.startLen, abandoned });
+      return done({ ...initialComposerState(), startLen: s.startLen, abandoned,
+        inComp: event.type === "sendFailed" && s.inComp });
     }
   }
 }
