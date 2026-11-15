@@ -188,6 +188,51 @@ export function useHerdrTerminal(
     let comp: string | null = null;   // composed text the pane already has
     let compFinal = "";               // what the composition committed as
     let compTimer = 0;                // waiting for xterm's commit-time onData
+    let lastCommit = "", lastCommitAt = 0;   // a late xterm commit-time onData is a duplicate
+    // iOS keyboard dictation (and a re-edited word) REPLACES its previous text in
+    // xterm's textarea: every new hypothesis selects the old one and inserts the
+    // whole phrase again. xterm sends the inserted text but never the deletion,
+    // so the pane got "t" + "take" + "take a" + … ("ttaketake a…"). The replaced
+    // span is erased with backspaces first. Only a span at the end of the
+    // textarea maps onto the pane's cursor; anything else is left alone.
+    const tailSelection = () => {
+      if (!ta) return "";
+      const v = ta.value, s0 = ta.selectionStart ?? v.length, e0 = ta.selectionEnd ?? v.length;
+      return s0 < e0 && e0 === v.length ? v.slice(s0, e0) : "";
+    };
+    // Input trace (temporary, 2026-11-15): textarea events + what was sent, so
+    // the next phone dictation shows the real event sequence. GET /api/debug/input.
+    let traceBuf: object[] = [], traceTimer = 0;
+    const trace = (ev: string, extra: Record<string, unknown> = {}) => {
+      traceBuf.push({ t: Math.round(performance.now()), ev, ...extra,
+        ss: ta?.selectionStart, se: ta?.selectionEnd, tail: ta ? ta.value.slice(-60) : null });
+      if (traceBuf.length > 400) traceBuf = traceBuf.slice(-400);
+      if (!traceTimer) traceTimer = window.setTimeout(() => {
+        traceTimer = 0;
+        const batch = traceBuf; traceBuf = [];
+        void fetch("/api/debug/input", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ events: batch }) }).catch(() => {});
+      }, 1000);
+    };
+    let replPending: { before: string; s0: number; e0: number } | null = null;
+    const onBeforeInput = (e: InputEvent) => {
+      trace("beforeinput", { inputType: e.inputType, data: e.data, composing: e.isComposing });
+      if (!ta || e.isComposing) return;
+      if (e.inputType !== "insertText" && e.inputType !== "insertReplacementText") return;
+      const gone = tailSelection();
+      if (gone) { raw("\x7f".repeat(Array.from(gone).length)); trace("sent", { del: Array.from(gone).length }); }
+      // xterm only sends insertText's data; a replacement's text is read back after the input lands.
+      if (e.inputType === "insertReplacementText")
+        replPending = { before: ta.value, s0: ta.selectionStart ?? 0, e0: ta.selectionEnd ?? 0 };
+    };
+    const onInput = (e: Event) => {
+      const ie = e as InputEvent;
+      trace("input", { inputType: ie.inputType, data: ie.data, composing: ie.isComposing });
+      if (!ta || !replPending) return;
+      const { before, s0, e0 } = replPending; replPending = null;
+      const ins = ta.value.slice(s0, ta.value.length - (before.length - e0));
+      if (ins) { raw(ins); trace("sent", { text: ins }); }
+    };
     const sendDiff = (from: string, to: string) => {
       const a = Array.from(from), b = Array.from(to);
       let i = 0;
@@ -199,22 +244,34 @@ export function useHerdrTerminal(
       clearTimeout(compTimer); compTimer = 0;
       if (comp !== null) sendDiff(comp, to);
       comp = null;
+      lastCommit = to; lastCommitAt = performance.now();
     };
-    const onCompStart = () => { if (compTimer) finishComp(compFinal); comp = ""; };
+    // A composition that starts over a selected tail (dictation's next
+    // hypothesis, a re-edited word) replaces text the pane already has: diff from it.
+    const onCompStart = () => {
+      if (compTimer) finishComp(compFinal);
+      comp = tailSelection();
+      trace("compositionstart", { base: comp });
+    };
     const onCompUpdate = (e: CompositionEvent) => {
+      trace("compositionupdate", { data: e.data });
       if (comp === null) comp = "";
       sendDiff(comp, e.data ?? "");
       comp = e.data ?? "";
     };
     const onCompEnd = (e: CompositionEvent) => {
+      trace("compositionend", { data: e.data });
       compFinal = e.data ?? comp ?? "";
       clearTimeout(compTimer);
       compTimer = window.setTimeout(() => finishComp(compFinal), 150);
     };
     const onKeystroke = (d: string) => {
+      trace("onData", { data: d.length > 80 ? d.slice(0, 80) + "…" : d });
       if (compTimer) {
         if (d === compFinal) { finishComp(d); return; }   // xterm's commit: already sent
         finishComp(compFinal);
+      } else if (d.length > 1 && d === lastCommit && performance.now() - lastCommitAt < 1500) {
+        lastCommit = ""; return;                           // xterm's commit arriving after the 150 ms wait
       }
       let out = d;
       if (armed.ctrl && d.length === 1) out = ctrlOf(d);
@@ -424,6 +481,8 @@ export function useHerdrTerminal(
     }
 
     const dataSub = term.onData(onKeystroke);
+    ta?.addEventListener("beforeinput", onBeforeInput as EventListener, true);
+    ta?.addEventListener("input", onInput, true);
     ta?.addEventListener("compositionstart", onCompStart);
     ta?.addEventListener("compositionupdate", onCompUpdate);
     ta?.addEventListener("compositionend", onCompEnd);
@@ -565,6 +624,9 @@ export function useHerdrTerminal(
       host.removeEventListener("touchmove", onTouchMove);
       dataSub.dispose();
       clearTimeout(compTimer);
+      clearTimeout(traceTimer);
+      ta?.removeEventListener("beforeinput", onBeforeInput as EventListener, true);
+      ta?.removeEventListener("input", onInput, true);
       ta?.removeEventListener("compositionstart", onCompStart);
       ta?.removeEventListener("compositionupdate", onCompUpdate);
       ta?.removeEventListener("compositionend", onCompEnd);
