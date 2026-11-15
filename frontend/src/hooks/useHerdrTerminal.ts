@@ -207,6 +207,8 @@ export function useHerdrTerminal(
           clearTimeout(timers.get(e.id)); timers.delete(e.id);
         } else if (e.type === "clearTextarea") {
           clearTa();
+        } else if (e.type === "toast") {
+          noteRef.current?.(e.msg, true);
         } else mods.consume(e.m);
       }
       if (!r.send) return;
@@ -221,7 +223,16 @@ export function useHerdrTerminal(
     const onBeforeInput = (e: InputEvent) => {
       if (TRACE) trace("beforeinput", { inputType: e.inputType, data: e.data, composing: e.isComposing });
       if (!ta || e.isComposing) return;
-      dispatch({ type: "beforeinput", now: performance.now(), inputType: e.inputType, data: e.data, ta: taSnap(), mods: snap() });
+      const t = taSnap();
+      // A collapsed caret with an autocorrect / suggestion tap: the browser says which span it replaces.
+      if (t.selStart === t.selEnd && (e.inputType === "insertReplacementText" || e.inputType === "insertText")) {
+        const r = typeof e.getTargetRanges === "function" ? e.getTargetRanges()[0] : undefined;
+        if (r && r.startContainer === r.endContainer && r.endOffset > r.startOffset && r.endOffset <= t.value.length
+            && (r.startContainer === ta || r.startContainer.parentNode === ta)) {
+          t.selStart = r.startOffset; t.selEnd = r.endOffset;
+        }
+      }
+      dispatch({ type: "beforeinput", now: performance.now(), inputType: e.inputType, data: e.data, ta: t, mods: snap() });
     };
     const onInput = (e: Event) => {
       const ie = e as InputEvent;
@@ -245,9 +256,15 @@ export function useHerdrTerminal(
       if (TRACE) trace("compositionend", { data: e.data });
       dispatch({ type: "compositionend", now, data: e.data ?? "", ta: taSnap() });
     };
-    const onKeyDownCapture = () => {
-      keydownNow = true; keydownDataSeen = false;
-      setTimeout(() => { keydownNow = false; }, 0);
+    // Called from attachCustomKeyEventHandler, which xterm runs FIRST in its keydown/keypress
+    // handling: everything xterm emits for this key (a keydown composition flush, the key's own
+    // data) is produced after this flag is set, and the flag drops once the event has finished.
+    let keyClear = 0;
+    const markKey = (e: KeyboardEvent) => {
+      if (e.type === "keydown") { keydownNow = true; keydownDataSeen = false; } else keydownNow = true;
+      if (!composing && e.keyCode !== 229) commitUntil = 0;   // a real key: no commit is pending any more
+      clearTimeout(keyClear);
+      keyClear = window.setTimeout(() => { keydownNow = false; }, 0);
     };
     // Focus / mouse reports xterm generates are never modified.
     const REPORT_RE = /^\x1b\[(?:[IO]|<\d+;\d+;\d+[Mm]|M[\s\S]{3})/;
@@ -259,7 +276,8 @@ export function useHerdrTerminal(
       else if (!keydownNow && !pasting && now < commitUntil) { origin = "commit"; commitUntil = 0; }
       if (keydownNow) keydownDataSeen = true;
       const source: ModSource = pasting ? "paste" : REPORT_RE.test(d) ? "report" : "key";
-      dispatch({ type: "onData", now, data: d, origin }, origin === "keydownFinalize" ? undefined : source);
+      // Composition flushes and commits are not typed keys: no Ctrl/Alt on them.
+      dispatch({ type: "onData", now, data: d, origin }, origin === "other" ? source : undefined);
     };
     // Every paste goes through the sanitiser (ESC / C0 / C1 dropped: no bracketed-paste breakout).
     const pasteText = (text: string) => {
@@ -277,13 +295,18 @@ export function useHerdrTerminal(
     };
     // herdr drag-select → OSC 52 (";c;<base64>") → system clipboard. Query form
     // ("?") is ignored: the page never reads the clipboard back to the TUI.
+    let oscToastAt = 0;           // rate limit for the over-cap toast
     const oscSub = term.parser.registerOscHandler(52, (data) => {
       const i = data.indexOf(";");
       const payload = i >= 0 ? data.slice(i + 1) : data;
       if (!payload || payload === "?") return true;
       const bytes = Math.floor((payload.length * 3) / 4) - (payload.endsWith("==") ? 2 : payload.endsWith("=") ? 1 : 0);
       if (bytes > OSC52_MAX_BYTES) {
-        noteRef.current?.("clipboard copy ignored: too large", true);
+        const t = performance.now();
+        if (!oscToastAt || t - oscToastAt > 5000) {
+          oscToastAt = t;
+          noteRef.current?.("clipboard copy ignored: too large", true);
+        }
         return true;
       }
       try {
@@ -403,13 +426,13 @@ export function useHerdrTerminal(
     };
 
     const dataSub = term.onData(onKeystroke);
-    ta?.addEventListener("keydown", onKeyDownCapture, true);
     ta?.addEventListener("beforeinput", onBeforeInput as EventListener, true);
     ta?.addEventListener("input", onInput, true);
     ta?.addEventListener("compositionstart", onCompStart);
     ta?.addEventListener("compositionupdate", onCompUpdate);
     ta?.addEventListener("compositionend", onCompEnd);
     term.attachCustomKeyEventHandler((e) => {
+      markKey(e);
       const shiftEnter = (e.code === "Enter" || e.code === "NumpadEnter") && e.shiftKey && !e.altKey && !e.metaKey;
       // xterm runs this for keypress too: Shift+Enter's keypress would add a bare CR.
       if (e.type !== "keydown") return !shiftEnter;
@@ -556,7 +579,7 @@ export function useHerdrTerminal(
       dataSub.dispose();
       for (const t of timers.values()) clearTimeout(t);
       trace.dispose();
-      ta?.removeEventListener("keydown", onKeyDownCapture, true);
+      clearTimeout(keyClear);
       ta?.removeEventListener("beforeinput", onBeforeInput as EventListener, true);
       ta?.removeEventListener("input", onInput, true);
       ta?.removeEventListener("compositionstart", onCompStart);

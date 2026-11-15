@@ -29,7 +29,9 @@ export type ComposerEffect =
   | { type: "setTimer"; id: string; ms: number }
   | { type: "cancelTimer"; id: string }
   | { type: "clearTextarea" }
-  | { type: "consumeModifier"; m: "ctrl" | "alt" };
+  | { type: "consumeModifier"; m: "ctrl" | "alt" }
+  /** Tell the user something was not sent. */
+  | { type: "toast"; msg: string };
 
 export interface ComposerState {
   /** Composed text the pane already has (null = not composing). */
@@ -213,6 +215,7 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
           effects.push({ type: "setTimer", id: SUPPRESS_TIMER, ms: SUPPRESS_MS });
           s = { ...s, suppress: event.data };
         }
+        effects.push({ type: "toast", msg: "edit not sent: dictation changed earlier text" });
         return done({ ...s, clearOnInput: true });
       }
       const gone = t.value.slice(t.selStart, t.selEnd);
@@ -245,8 +248,9 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       const d = event.data;
       if (event.origin === "keydownFinalize") {
         if (s.comp === null) return done(s, d);
-        const r = diffComp(s, s.comp, d);
-        return done({ ...s, comp: null, lead: null, lastCommit: d, lastExpected: d, lastCommitAt: event.now }, r.send);
+        // xterm's flush can be empty when it has not yet seen the composed text: never erase the pane for that.
+        const r = d === "" ? { send: "" } : diffComp(s, s.comp, d);
+        return done({ ...s, comp: null, lead: null, lastCommit: d || s.comp, lastExpected: d || s.comp, lastCommitAt: event.now }, r.send);
       }
       if (s.suppress !== null && d === s.suppress) {
         effects.push({ type: "cancelTimer", id: SUPPRESS_TIMER });
