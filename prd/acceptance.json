@@ -32,11 +32,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:19-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:32-06:00",
+        "rc": 0,
+        "head": "4398ad6",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a1.py",
+        "tail": "...                                                                      [100%]\n3 passed in 2.10s\n"
       }
     },
     {
@@ -61,11 +68,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "open",
       "red_proven": {
         "at": "2026-11-15T15:44:23-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:40-06:00",
+        "rc": 1,
+        "head": "4398ad6",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a2.py",
+        "tail": "  raised far above that so this tests exit detection, not the 1013 backlog close (A-5).\"\"\"\n        from app.routers import terminal\n        monkeypatch.setattr(terminal, \"OUT_Q_MAX_BYTES\", 256 << 20)\n        monkeypatch.setenv(\"FAKE_HERDR_FLOOD_BYTES\", str(24 << 20))\n        monkeypatch.setenv(\"FAKE_HERDR_SECONDS\", \"0\")\n        override_settings(herdr_bin=str(FAKES / \"herdr_flood.py\"))\n        ws = open_ws(live_server.url(), max_queue=2)\n        time.sleep(2.5)                      # not reading: the flood is written and the client has exited\n        out = wait_close(ws, 2.0)\n>       assert out.code == 1012, (f\"client exit with output backed up must close 1012 within 2 s of the \"\n                                  f\"browser reading again, got {out.code} {out.reason!r} after {len(out.data)} bytes\")\nE       AssertionError: client exit with output backed up must close 1012 within 2 s of the browser reading again, got None '' after 15692040 bytes\nE       assert None == 1012\nE        +  where None = Outcome(data=b'\\x00\\x00\\x00\\x00\\x04\\x05\\x06\\x07\\x08\\t\\n\\x0b\\x0c\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\...@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmno\\x00\\x00\\xefquvwx', texts=[], code=None, reason='', closed_after=None).code\n\ntests/acceptance/test_a2.py:27: AssertionError\n=========================== short test summary info ============================\nFAILED tests/acceptance/test_a2.py::test_client_exit_while_output_backed_up_closes_1012\n1 failed, 1 passed in 6.71s\n"
       }
     },
     {
@@ -90,11 +104,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:26-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:47-06:00",
+        "rc": 0,
+        "head": "4398ad6",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a3.py",
+        "tail": "........                                                                 [100%]\n8 passed in 5.96s\n"
       }
     },
     {
@@ -118,11 +139,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:28-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:50-06:00",
+        "rc": 0,
+        "head": "4398ad6",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a4.py",
+        "tail": ".                                                                        [100%]\n1 passed in 0.93s\n"
       }
     },
     {
@@ -146,11 +174,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 400,
-      "status": "red",
+      "status": "open",
       "red_proven": {
         "at": "2026-11-15T15:44:30-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:56:27-06:00",
+        "rc": 1,
+        "head": "4398ad6",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a5.py",
+        "tail": "013_and_loses_nothing_silently _________\n\nlive_server = <tests.acceptance.conftest.LiveServer object at 0x7f93f51e4910>\nlive_herdr = <tests.fakes.fake_herdr_api.FakeHerdrApi object at 0x7f93f3808f50>\noverride_settings = <function override_settings.<locals>.apply at 0x7f93f3814220>\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f93f380a050>\n\n    def test_backlog_over_cap_closes_1013_and_loses_nothing_silently(live_server, live_herdr, override_settings, monkeypatch):\n        n = 32 << 20\n        _flood(monkeypatch, override_settings, n, cap=1 << 20)\n        ws = open_ws(live_server.url(), max_queue=2)\n        time.sleep(3.0)                                       # the browser stops reading\n        out = wait_close(ws, 30.0)\n>       assert out.code == 1013, f\"a backlog over the cap must close 1013, got {out.code} {out.reason!r}\"\nE       AssertionError: a backlog over the cap must close 1013, got 1012 'herdr client exited'\nE       assert 1012 == 1013\nE        +  where 1012 = Outcome(data=b'\\x00\\x00\\x00\\x00\\x04\\x05\\x06\\x07\\x08\\t\\n\\x0b\\x0c\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\...f6\\xf7\\xf8\\xf9\\xfa\\xfb\\xfc\\xfd\\xfe', texts=[], code=1012, reason='herdr client exited', closed_after=18.64031445980072).code\n\ntests/acceptance/test_a5.py:42: AssertionError\n=========================== short test summary info ============================\nFAILED tests/acceptance/test_a5.py::test_backlog_over_cap_closes_1013_and_loses_nothing_silently\n1 failed, 2 passed in 35.60s\n"
       }
     },
     {
@@ -174,11 +209,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:35-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:56:32-06:00",
+        "rc": 0,
+        "head": "4398ad6",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a6.py",
+        "tail": ".                                                                        [100%]\n1 passed in 3.95s\n"
       }
     },
     {
@@ -202,11 +244,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:38-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:56:35-06:00",
+        "rc": 0,
+        "head": "4398ad6",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a7.py",
+        "tail": "..                                                                       [100%]\n2 passed in 1.70s\n"
       }
     },
     {
