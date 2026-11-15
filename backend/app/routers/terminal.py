@@ -55,16 +55,31 @@ _STRIP_ENV = ("HERDR_ENV", "HERDR_PANE_ID", "HERDR_SOCKET_PATH")
 
 
 def _spawn(session: str, rows: int, cols: int) -> tuple[int, int]:
+    # Build everything in the parent: the child of a threaded process must do nothing but exec.
+    env = {k: v for k, v in os.environ.items() if k not in _STRIP_ENV}
+    env["TERM"] = "xterm-256color"
+    herdr_bin = settings.herdr_bin
+    argv = [herdr_bin, "--session", session]
     pid, fd = pty.fork()
     if pid == 0:  # child → become a herdr client
-        for k in _STRIP_ENV:
-            os.environ.pop(k, None)
-        os.environ["TERM"] = "xterm-256color"
         try:
-            os.execvp(settings.herdr_bin, [settings.herdr_bin, "--session", session])
+            os.execvpe(herdr_bin, argv, env)
         finally:
             os._exit(127)
-    _set_winsize(fd, rows, cols)
+    try:
+        os.set_inheritable(fd, False)   # no other herdr client may inherit this master fd
+        _set_winsize(fd, rows, cols)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.kill(pid, signal.SIGKILL)
+            os.waitpid(pid, 0)
+        except (ProcessLookupError, ChildProcessError):
+            pass
+        raise
     return pid, fd
 
 
@@ -113,7 +128,15 @@ async def _reap(pid: int) -> None:
             return
         if done:
             return
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:      # server shutdown: still leave no orphan
+            try:
+                os.kill(pid, signal.SIGKILL)
+                os.waitpid(pid, 0)
+            except (ProcessLookupError, ChildProcessError):
+                pass
+            raise
     try:
         os.kill(pid, signal.SIGKILL)
         os.waitpid(pid, 0)
@@ -133,22 +156,23 @@ async def terminal(ws: WebSocket) -> None:
     if _live >= settings.max_terminals:
         await ws.close(code=1013, reason="terminal limit reached")   # try again later
         return
-    if not shutil.which(settings.herdr_bin):
-        await ws.close(code=4500, reason="herdr binary missing")
-        return
-    if not await asyncio.to_thread(herdr.server_alive, settings.probe_timeout):
-        await ws.close(code=4503, reason="herdr server not running")
-        return
-    # The session is the service's, not the browser's: a client must not be
-    # able to attach to some other herdr session on the box.
-    session = settings.herdr_session
-    rows = _clamp(ws.query_params.get("rows"), 40)
-    cols = _clamp(ws.query_params.get("cols"), 120)
-
-    _live += 1
+    _live += 1          # claimed before any await so concurrent connects cannot all pass the limit
     pid = fd = -1
     loop = asyncio.get_running_loop()
     try:
+        if not shutil.which(settings.herdr_bin):
+            await ws.close(code=4500, reason="herdr binary missing")
+            return
+        state = await asyncio.to_thread(herdr.probe, settings.probe_timeout)
+        if state != "ok":
+            await ws.close(code=4503, reason="herdr server not responding" if state == "silent"
+                           else "herdr server not running")
+            return
+        # The session is the service's, not the browser's: a client must not be
+        # able to attach to some other herdr session on the box.
+        session = settings.herdr_session
+        rows = _clamp(ws.query_params.get("rows"), 40)
+        cols = _clamp(ws.query_params.get("cols"), 120)
         try:
             pid, fd = _spawn(session, rows, cols)
         except OSError:
@@ -180,8 +204,8 @@ async def _bridge(ws: WebSocket, loop: asyncio.AbstractEventLoop, pid: int, fd: 
     # read() after close, so a fast reconnect can't race a reused fd number.
     def _on_readable() -> None:
         nonlocal queued
-        # A pty hands over ~4 KB per read: take everything that is ready (bounded) in one
-        # callback so a bulk flood is not paced by one event-loop turn per 4 KB.
+        # Take everything that is ready (bounded to 256 KiB) in one callback, in 64 KiB reads,
+        # so a bulk flood is not paced by one event-loop turn per read.
         chunks: list[bytes] = []
         got = 0
         eof = False
@@ -199,6 +223,8 @@ async def _bridge(ws: WebSocket, loop: asyncio.AbstractEventLoop, pid: int, fd: 
             chunks.append(data)
             got += len(data)
         if chunks:
+            # Backlog beats EOF: if both happen in this callback the close is 1013, not 1012
+            # (the reader is removed here, so the EOF is never queued).
             if queued + got > OUT_Q_MAX_BYTES:
                 # The browser is not keeping up: stop reading, let what is queued drain in
                 # order, then close; the client reconnects and herdr repaints.

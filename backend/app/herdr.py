@@ -222,10 +222,10 @@ def _socket_request(method: str, params: dict) -> Any:
     return env.get("result")
 
 
-def server_alive(timeout: float) -> bool:
-    """Bounded probe of herdr's control socket: True when something answers a request with a
-    newline-terminated JSON reply (a result or an error both count). No socket file, a stale
-    socket, or a listener that never replies all return False within about `timeout` seconds."""
+def probe(timeout: float) -> str:
+    """Bounded probe of herdr's control socket. "ok": something answered with a newline-terminated
+    JSON reply (a result or an error both count). "down": no socket file / connect refused / bad
+    reply. "silent": connected but no reply within the timeout."""
     deadline = time.monotonic() + max(0.05, timeout)
     req = (json.dumps({"id": "web:probe", "method": "ping", "params": {}}) + "\n").encode()
     buf = b""
@@ -233,20 +233,28 @@ def server_alive(timeout: float) -> bool:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.settimeout(max(0.05, timeout))
             s.connect(socket_path())
-            s.sendall(req)
-            while b"\n" not in buf:
-                left = deadline - time.monotonic()
-                if left <= 0:
-                    return False
-                s.settimeout(left)
-                chunk = s.recv(65536)
-                if not chunk:
-                    return False
-                buf += chunk
+            try:
+                s.sendall(req)
+                while b"\n" not in buf:
+                    left = deadline - time.monotonic()
+                    if left <= 0:
+                        return "silent"
+                    s.settimeout(left)
+                    chunk = s.recv(65536)
+                    if not chunk:
+                        return "down"
+                    buf += chunk
+            except socket.timeout:
+                return "silent"
         json.loads(buf.split(b"\n", 1)[0])
-        return True
+        return "ok"
     except (OSError, ValueError):
-        return False
+        return "down"
+
+
+def server_alive(timeout: float) -> bool:
+    """True when herdr's control socket answers within about `timeout` seconds."""
+    return probe(timeout) == "ok"
 
 
 # ---------------------------------------------------------------------------

@@ -32,11 +32,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:19-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:35:41-06:00",
+        "rc": 0,
+        "head": "7b80efb",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a1.py",
+        "tail": "...                                                                      [100%]\n3 passed in 2.43s\n"
       }
     },
     {
@@ -61,11 +68,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T16:21:53-06:00",
         "rc": 1,
         "head": "ab68095"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:35:48-06:00",
+        "rc": 0,
+        "head": "7b80efb",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a2.py",
+        "tail": "..                                                                       [100%]\n2 passed in 6.57s\n"
       }
     },
     {
@@ -90,11 +104,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:26-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:35:55-06:00",
+        "rc": 0,
+        "head": "7b80efb",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a3.py",
+        "tail": "........                                                                 [100%]\n8 passed in 5.70s\n"
       }
     },
     {
@@ -118,11 +139,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:28-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:35:57-06:00",
+        "rc": 0,
+        "head": "7b80efb",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a4.py",
+        "tail": ".                                                                        [100%]\n1 passed in 1.08s\n"
       }
     },
     {
@@ -146,11 +174,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 400,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T16:21:55-06:00",
         "rc": 1,
         "head": "ab68095"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:36:16-06:00",
+        "rc": 0,
+        "head": "7b80efb",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a5.py",
+        "tail": "...                                                                      [100%]\n3 passed in 16.97s\n"
       }
     },
     {
@@ -174,11 +209,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:35-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:36:21-06:00",
+        "rc": 0,
+        "head": "7b80efb",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a6.py",
+        "tail": ".                                                                        [100%]\n1 passed in 3.91s\n"
       }
     },
     {
@@ -202,11 +244,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:38-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:36:24-06:00",
+        "rc": 0,
+        "head": "7b80efb",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a7.py",
+        "tail": "..                                                                       [100%]\n2 passed in 2.09s\n"
       }
     },
     {
