@@ -82,9 +82,10 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
     };
     const res = await submitDictation(deps, target.pane_id, text, {
       signal: ctl.signal,
-      onCountdown: (until) => { setNow(Date.now()); setPh({ k: "countdown", target, text, until }); },
+      onCountdown: (until) => { if (abort.current !== ctl) return; setNow(Date.now()); setPh({ k: "countdown", target, text, until }); },
     });
-    if (abort.current === ctl) abort.current = null;
+    if (abort.current !== ctl) return;     // cancelled, or a newer dictation owns the phase
+    abort.current = null;
     setPh({ k: "idle" });
     if (res.entered) flash(`sent → ${paneName(target)} ✓`);
   }
@@ -192,6 +193,7 @@ export function Mic({ flash }: { flash: (m: string, bad?: boolean) => void }) {
     }
     else {
       abort.current?.abort();
+      abort.current = null;
       setPh({ k: "idle" });
       flash("auto-submit cancelled — text left in the box");
     }

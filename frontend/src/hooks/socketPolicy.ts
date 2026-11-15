@@ -27,7 +27,7 @@ const REFUSALS: Record<number, string> = {
 };
 
 /**
- * @param everOpened  this socket reached OPEN before it closed
+ * @param everOpened  this socket was established (first data, or up for a few seconds) before it closed
  * @param failStreak  consecutive closes of sockets that never opened, counting this one (0 when this one opened)
  */
 export function onClose(code: number, reason: string, everOpened: boolean, failStreak: number): CloseDecision {
@@ -38,8 +38,9 @@ export function onClose(code: number, reason: string, everOpened: boolean, failS
   const label = REFUSALS[code];
   const why = (reason ?? "").trim();
   if (label !== undefined) {
-    message = why ? `${label}: ${why}` : label;
-    delayMs = Math.max(delayMs, REFUSAL_MIN_MS);
+    message = !why ? label : why.toLowerCase().includes(label.toLowerCase()) ? why : `${label}: ${why}`;
+    // 2 s, 4 s, ... for refusals that keep coming (capped).
+    delayMs = Math.min(REFUSAL_MIN_MS * 2 ** Math.max(0, streak - 1), MAX_BACKOFF_MS);
   } else if (!everOpened && streak >= NEVER_OPENED_LIMIT) {
     message = `cannot reach herdr (${streak} attempts without connecting)${why ? `: ${why}` : ""}`;
   }

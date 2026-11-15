@@ -26,7 +26,7 @@ export interface MicSubmitDeps {
 
 export type MicSubmitResult =
   | { entered: true }
-  | { entered: false; reason: SkipReason | "not-delivered" | "cancelled" };
+  | { entered: false; reason: SkipReason | "not-delivered" | "cancelled" | "enter-failed" };
 
 export interface MicSubmitOptions {
   /** Called once the text is delivered and the countdown starts; `until` is the due time (deps.now clock). */
@@ -46,13 +46,15 @@ export async function submitDictation(
   deps: MicSubmitDeps, paneId: string, text: string, opts: MicSubmitOptions = {},
 ): Promise<MicSubmitResult> {
   const { api } = deps;
-  // Deliver only to a pane that is not waiting on a question. A failed fetch
-  // does not stop the (harmless) text; the Enter check below decides.
+  // Deliver only to a pane that is not waiting on a question; fail closed.
   try {
     const st = await api.status(paneId);
     if (st === null) { api.toast("pane is gone — nothing sent", true); return { entered: false, reason: "not-delivered" }; }
     if (st === "blocked") { api.toast("agent is waiting on a question — nothing sent", true); return { entered: false, reason: "not-delivered" }; }
-  } catch { /* checked again before Enter */ }
+  } catch {
+    api.toast("could not check the pane — nothing sent", true);
+    return { entered: false, reason: "not-delivered" };
+  }
   try { await api.deliver(paneId, text); }
   catch (e) {
     api.toast(`send failed: ${(e as Error).message}`, true);
@@ -74,8 +76,11 @@ export async function submitDictation(
   try { st = await api.status(paneId); } catch { return skip("status-failed"); }
   if (st === null) return skip("gone");
   if (st === "blocked") return skip("blocked");
+  // The fetch may have taken long: a cancel tap or a phone lock meanwhile must not send Enter.
+  if (opts.signal?.aborted) return { entered: false, reason: "cancelled" };
+  if (deps.now() - until > MAX_LATE_MS) return skip("late");
   try { await api.sendEnter(paneId); }
-  catch (e) { api.toast(`Enter failed: ${(e as Error).message}`, true); return { entered: false, reason: "status-failed" }; }
+  catch (e) { api.toast(`Enter failed: ${(e as Error).message}`, true); return { entered: false, reason: "enter-failed" }; }
   return { entered: true };
 }
 

@@ -730,11 +730,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:39:24-06:00",
         "rc": 1,
         "head": "144bb9f"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:14-06:00",
+        "rc": 0,
+        "head": "03522b5",
+        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d1.test.ts",
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d1.test.ts (5 tests) 279ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  15:55:12\n   Duration  1.81s (transform 155ms, setup 0ms, collect 101ms, tests 279ms, environment 826ms, prepare 241ms)\n\n"
       }
     },
     {
@@ -752,11 +759,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:39:28-06:00",
         "rc": 1,
         "head": "144bb9f"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:17-06:00",
+        "rc": 0,
+        "head": "03522b5",
+        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d2.test.ts",
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d2.test.ts (5 tests) 239ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  15:55:15\n   Duration  2.04s (transform 99ms, setup 0ms, collect 77ms, tests 239ms, environment 761ms, prepare 248ms)\n\n"
       }
     },
     {
@@ -774,11 +788,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:39:30-06:00",
         "rc": 1,
         "head": "144bb9f"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:20-06:00",
+        "rc": 0,
+        "head": "03522b5",
+        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d3.test.ts",
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d3.test.ts (17 tests) 26ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  15:55:18\n   Duration  1.60s (transform 111ms, setup 0ms, collect 103ms, tests 26ms, environment 689ms, prepare 133ms)\n\n"
       }
     },
     {
@@ -796,11 +817,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:42:06-06:00",
         "rc": 1,
         "head": "600a157"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:23-06:00",
+        "rc": 0,
+        "head": "03522b5",
+        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d4.test.ts",
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d4.test.ts (2 tests) 13ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  15:55:21\n   Duration  1.57s (transform 137ms, setup 0ms, collect 100ms, tests 13ms, environment 875ms, prepare 174ms)\n\n"
       }
     },
     {
@@ -818,11 +846,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:39:37-06:00",
         "rc": 1,
         "head": "144bb9f"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:55:27-06:00",
+        "rc": 0,
+        "head": "03522b5",
+        "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d5.test.ts",
+        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-d/frontend\n\n \u2713 test/acceptance/d5.test.ts (2 tests) 13ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  15:55:25\n   Duration  1.50s (transform 116ms, setup 0ms, collect 93ms, tests 13ms, environment 743ms, prepare 152ms)\n\n"
       }
     },
     {
@@ -841,11 +876,18 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 1500,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:41:12-06:00",
         "rc": 1,
         "head": "144bb9f"
+      },
+      "evidence": {
+        "at": "2026-11-15T15:56:20-06:00",
+        "rc": 0,
+        "head": "03522b5",
+        "check": "frontend/e2e/check_items.sh D-6",
+        "tail": "ff2               14.06 kB\ndist/assets/outfit-latin-400-normal-CQm_KAGb.woff2               14.08 kB\ndist/assets/outfit-latin-600-normal-eKzYX13k.woff2               14.10 kB\ndist/assets/outfit-latin-500-normal-CDNGX6wd.woff                17.74 kB\ndist/assets/outfit-latin-300-normal-COH0-M0r.woff                18.36 kB\ndist/assets/outfit-latin-400-normal-DodQBVgl.woff                18.38 kB\ndist/assets/outfit-latin-600-normal-CZzGovRi.woff                18.50 kB\ndist/assets/outfit-latin-700-normal-BKcN8tbM.woff                18.50 kB\ndist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2       21.17 kB\ndist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB\ndist/assets/jetbrains-mono-latin-400-normal-B11XCQ5g.woff        27.85 kB\ndist/assets/jetbrains-mono-latin-500-normal-DNWG5JNy.woff        28.56 kB\ndist/assets/index-D0VpOlzy.css                                   44.54 kB \u2502 gzip:  19.81 kB\ndist/assets/index-wXEKObto.js                                   574.20 kB \u2502 gzip: 158.60 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\u2713 built in 2.06s\nbuilt acc-hw-lane-d -> /tmp/hw-acc-dist.opjTp0\n  .. close-message ok\n  .. never-open ok\n  .. mic-blocked ok\n  .. mic-enter ok\n"
       }
     }
   ],

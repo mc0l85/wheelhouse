@@ -50,7 +50,8 @@ export default function App() {
   const interactive = !!health?.writes_enabled;
   const onConn = useCallback((info: ConnInfo) => {
     const s = info.state;
-    setConnMsg(info.message ?? "");
+    if (info.message) setConnMsg(info.message);
+    else if (info.state === "open" || info.state === "restored") setConnMsg("");
     if (s === "restored") { flash("reconnected ✓"); setConn("open"); } else setConn(s);
   }, [flash]);
   const onPasteImage = useCallback((img: Blob) => {

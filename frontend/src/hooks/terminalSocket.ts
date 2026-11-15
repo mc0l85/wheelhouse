@@ -40,6 +40,8 @@ export interface TerminalSocket {
 }
 
 const PING_MS = 15000, PONG_WAIT_MS = 5000;
+/** An OPEN socket counts as established after its first binary frame or this long up. */
+const ESTABLISHED_MS = 5000;
 
 export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocket {
   let ws: WebSocket | null = null;
@@ -48,8 +50,8 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
   let retryTimer = 0;
   let pingTimer = 0;
   let pongDeadline = 0;
-  let everOpened = false;
-  let failStreak = 0;       // consecutive sockets that closed without ever opening
+  let everOpened = false;   // some socket was established (not merely OPEN)
+  let failStreak = 0;       // consecutive sockets that closed before being established
   let connectTimer = 0;
 
   const isOpen = () => !!ws && ws.readyState === WebSocket.OPEN;
@@ -115,7 +117,22 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
     const sock = new WebSocket(opts.url());
     ws = sock;
     sock.binaryType = "arraybuffer";
-    let opened = false;
+    let opened = false;          // reached OPEN
+    let established = false;     // first binary frame, or ESTABLISHED_MS up
+    let establishTimer = 0;
+    // A refused socket is accepted first and then closed with a code, so OPEN
+    // alone proves nothing: only now reset the backoff and the terminal.
+    const establish = () => {
+      if (established || ws !== sock) return;
+      established = true;
+      clearTimeout(establishTimer);
+      opts.onReset(everOpened);
+      if (everOpened) opts.onConn({ state: "restored" });
+      everOpened = true;
+      failStreak = 0;
+      retry = 0;
+      opts.onConn({ state: "open" });
+    };
     // A handshake that never completes (dead route, stalled proxy) is abandoned
     // and counted like a refused one.
     connectTimer = window.setTimeout(() => {
@@ -135,32 +152,27 @@ export function createTerminalSocket(opts: TerminalSocketOptions): TerminalSocke
         return;
       }
       clearTimeout(pongDeadline);                  // any output proves liveness
+      establish();
       opts.onData(new Uint8Array(ev.data));
     };
     sock.onopen = () => {
       if (ws !== sock) return;
-      opened = true; failStreak = 0;
+      opened = true;
       clearTimeout(connectTimer);
-      opts.onReset(everOpened);
-      if (everOpened) opts.onConn({ state: "restored" });
-      everOpened = true;
-      retry = 0;
-      opts.onConn({ state: "open" });
+      establishTimer = window.setTimeout(establish, ESTABLISHED_MS);
       opts.onOpen();
       clearInterval(pingTimer);
       pingTimer = window.setInterval(() => sendPing(), PING_MS);
     };
     sock.onclose = (ev) => {
       if (ws !== sock) return;                     // superseded socket
-      clearInterval(pingTimer); clearTimeout(pongDeadline); clearTimeout(connectTimer);
+      clearInterval(pingTimer); clearTimeout(pongDeadline); clearTimeout(connectTimer); clearTimeout(establishTimer);
       if (!disposed) {
-        if (!opened) failStreak++;
-        const dec = onClose(ev?.code ?? 1006, ev?.reason ?? "", opened, opened ? 0 : failStreak);
+        if (!established) failStreak++;
+        const dec = onClose(ev?.code ?? 1006, ev?.reason ?? "", established, established ? 0 : failStreak);
         // herdr's re-attach repaints everything; clear stale modes first.
         opts.onLost();
-        if (!dec.retry) { opts.onConn({ state: "reconnecting", message: dec.message }); return; }
-        // Keep the existing quick first retry after an ordinary drop.
-        scheduleReconnect(opened && !dec.message ? undefined : dec.delayMs, dec.message);
+        scheduleReconnect(dec.delayMs, dec.message);
       }
     };
   }
