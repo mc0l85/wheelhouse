@@ -32,11 +32,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:19-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:37:51-06:00",
+        "rc": 0,
+        "head": "a5b8883",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a1.py",
+        "tail": "...                                                                      [100%]\n3 passed in 1.82s\n"
       }
     },
     {
@@ -61,11 +68,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T16:21:53-06:00",
         "rc": 1,
         "head": "ab68095"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:37:59-06:00",
+        "rc": 0,
+        "head": "a5b8883",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a2.py",
+        "tail": "..                                                                       [100%]\n2 passed in 6.41s\n"
       }
     },
     {
@@ -90,11 +104,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:26-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:38:05-06:00",
+        "rc": 0,
+        "head": "a5b8883",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a3.py",
+        "tail": "........                                                                 [100%]\n8 passed in 5.68s\n"
       }
     },
     {
@@ -118,11 +139,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:28-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:38:08-06:00",
+        "rc": 0,
+        "head": "a5b8883",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a4.py",
+        "tail": ".                                                                        [100%]\n1 passed in 0.90s\n"
       }
     },
     {
@@ -146,11 +174,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 400,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T16:21:55-06:00",
         "rc": 1,
         "head": "ab68095"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:38:24-06:00",
+        "rc": 0,
+        "head": "a5b8883",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a5.py",
+        "tail": "...                                                                      [100%]\n3 passed in 15.62s\n"
       }
     },
     {
@@ -174,11 +209,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:35-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:38:29-06:00",
+        "rc": 0,
+        "head": "a5b8883",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a6.py",
+        "tail": ".                                                                        [100%]\n1 passed in 3.90s\n"
       }
     },
     {
@@ -202,11 +244,18 @@
       "builder": "sonnet",
       "network": false,
       "timeout": 300,
-      "status": "red",
+      "status": "done",
       "red_proven": {
         "at": "2026-11-15T15:44:38-06:00",
         "rc": 1,
         "head": "15f23d7"
+      },
+      "evidence": {
+        "at": "2026-11-15T16:38:32-06:00",
+        "rc": 0,
+        "head": "a5b8883",
+        "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_a7.py",
+        "tail": "..                                                                       [100%]\n2 passed in 1.76s\n"
       }
     },
     {
@@ -237,11 +286,11 @@
         "head": "15f23d7"
       },
       "evidence": {
-        "at": "2026-11-15T15:55:23-06:00",
+        "at": "2026-11-15T16:38:42-06:00",
         "rc": 0,
-        "head": "dfb1f64",
+        "head": "a5b8883",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b1.py",
-        "tail": "...                                                                      [100%]\n3 passed in 8.82s\n"
+        "tail": "...                                                                      [100%]\n3 passed in 8.86s\n"
       }
     },
     {
@@ -272,11 +321,11 @@
         "head": "15f23d7"
       },
       "evidence": {
-        "at": "2026-11-15T15:55:29-06:00",
+        "at": "2026-11-15T16:38:49-06:00",
         "rc": 0,
-        "head": "dfb1f64",
+        "head": "a5b8883",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b2.py",
-        "tail": "...                                                                      [100%]\n3 passed in 5.97s\n"
+        "tail": "...                                                                      [100%]\n3 passed in 5.95s\n"
       }
     },
     {
@@ -306,11 +355,11 @@
         "head": "15f23d7"
       },
       "evidence": {
-        "at": "2026-11-15T15:55:31-06:00",
+        "at": "2026-11-15T16:38:51-06:00",
         "rc": 0,
-        "head": "dfb1f64",
+        "head": "a5b8883",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b3.py",
-        "tail": ".....                                                                    [100%]\n=============================== warnings summary ===============================\n.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /tempfs/hw-lane-b/backend/.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n5 passed, 1 warning in 0.80s\n"
+        "tail": ".....                                                                    [100%]\n=============================== warnings summary ===============================\n.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /tempfs/hw-lane-a/backend/.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n5 passed, 1 warning in 0.66s\n"
       }
     },
     {
@@ -340,11 +389,11 @@
         "head": "15f23d7"
       },
       "evidence": {
-        "at": "2026-11-15T15:55:32-06:00",
+        "at": "2026-11-15T16:38:51-06:00",
         "rc": 0,
-        "head": "dfb1f64",
+        "head": "a5b8883",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b4.py",
-        "tail": "...                                                                      [100%]\n3 passed in 0.03s\n"
+        "tail": "...                                                                      [100%]\n3 passed in 0.02s\n"
       }
     },
     {
@@ -374,9 +423,9 @@
         "head": "15f23d7"
       },
       "evidence": {
-        "at": "2026-11-15T15:55:32-06:00",
+        "at": "2026-11-15T16:38:52-06:00",
         "rc": 0,
-        "head": "dfb1f64",
+        "head": "a5b8883",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b5.py",
         "tail": "...............                                                          [100%]\n15 passed in 0.04s\n"
       }
@@ -421,9 +470,9 @@
         "head": "15f23d7"
       },
       "evidence": {
-        "at": "2026-11-15T15:55:34-06:00",
+        "at": "2026-11-15T16:38:53-06:00",
         "rc": 0,
-        "head": "dfb1f64",
+        "head": "a5b8883",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b7.py",
         "tail": ".........                                                                [100%]\n9 passed in 0.98s\n"
       }

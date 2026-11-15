@@ -30,16 +30,19 @@ import pty
 import signal
 import struct
 import secrets
+import shutil
 import termios
 import time
 from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from .. import herdr
 from ..config import settings
 from ..origin import origin_ok
 
 router = APIRouter(prefix="/api/ws", tags=["terminal"])
+OUT_Q_MAX_BYTES = 8 * 1024 * 1024   # queued pty output per client before close 1013 "output backlog"
 _live = 0       # open terminal sockets (each one is a herdr client process)
 
 
@@ -52,14 +55,31 @@ _STRIP_ENV = ("HERDR_ENV", "HERDR_PANE_ID", "HERDR_SOCKET_PATH")
 
 
 def _spawn(session: str, rows: int, cols: int) -> tuple[int, int]:
+    # Build everything in the parent: the child of a threaded process must do nothing but exec.
+    env = {k: v for k, v in os.environ.items() if k not in _STRIP_ENV}
+    env["TERM"] = "xterm-256color"
+    herdr_bin = settings.herdr_bin
+    argv = [herdr_bin, "--session", session]
     pid, fd = pty.fork()
     if pid == 0:  # child → become a herdr client
-        for k in _STRIP_ENV:
-            os.environ.pop(k, None)
-        os.environ["TERM"] = "xterm-256color"
-        os.execvp(settings.herdr_bin, [settings.herdr_bin, "--session", session])
-        os._exit(127)
-    _set_winsize(fd, rows, cols)
+        try:
+            os.execvpe(herdr_bin, argv, env)
+        finally:
+            os._exit(127)
+    try:
+        os.set_inheritable(fd, False)   # no other herdr client may inherit this master fd
+        _set_winsize(fd, rows, cols)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.kill(pid, signal.SIGKILL)
+            os.waitpid(pid, 0)
+        except (ProcessLookupError, ChildProcessError):
+            pass
+        raise
     return pid, fd
 
 
@@ -108,7 +128,15 @@ async def _reap(pid: int) -> None:
             return
         if done:
             return
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:      # server shutdown: still leave no orphan
+            try:
+                os.kill(pid, signal.SIGKILL)
+                os.waitpid(pid, 0)
+            except (ProcessLookupError, ChildProcessError):
+                pass
+            raise
     try:
         os.kill(pid, signal.SIGKILL)
         os.waitpid(pid, 0)
@@ -120,37 +148,93 @@ async def _reap(pid: int) -> None:
 async def terminal(ws: WebSocket) -> None:
     # CORS does not apply to WebSockets: without this, any web page the user
     # visits could open a shell here through their browser (close 1008 = policy).
+    await ws.accept()      # accept first: a pre-accept close reaches the browser as HTTP 403, no reason
     if not origin_ok(ws.headers):
-        await ws.close(code=1008)
+        await ws.close(code=1008, reason="origin not allowed")
         return
     global _live
     if _live >= settings.max_terminals:
-        await ws.close(code=1013)               # try again later
+        await ws.close(code=1013, reason="terminal limit reached")   # try again later
         return
-    await ws.accept()
-    _live += 1
-    # The session is the service's, not the browser's: a client must not be
-    # able to attach to some other herdr session on the box.
-    session = settings.herdr_session
-    rows = _clamp(ws.query_params.get("rows"), 40)
-    cols = _clamp(ws.query_params.get("cols"), 120)
-
-    pid, fd = _spawn(session, rows, cols)
-    os.set_blocking(fd, False)
+    _live += 1          # claimed before any await so concurrent connects cannot all pass the limit
+    pid = fd = -1
     loop = asyncio.get_running_loop()
-    out_q: asyncio.Queue[bytes] = asyncio.Queue()
+    try:
+        if not shutil.which(settings.herdr_bin):
+            await ws.close(code=4500, reason="herdr binary missing")
+            return
+        state = await asyncio.to_thread(herdr.probe, settings.probe_timeout)
+        if state != "ok":
+            await ws.close(code=4503, reason="herdr server not responding" if state == "silent"
+                           else "herdr server not running")
+            return
+        # The session is the service's, not the browser's: a client must not be
+        # able to attach to some other herdr session on the box.
+        session = settings.herdr_session
+        rows = _clamp(ws.query_params.get("rows"), 40)
+        cols = _clamp(ws.query_params.get("cols"), 120)
+        try:
+            pid, fd = _spawn(session, rows, cols)
+        except OSError:
+            await ws.close(code=1011, reason="could not start herdr client")
+            return
+        os.set_blocking(fd, False)
+        await _bridge(ws, loop, pid, fd)
+    finally:
+        _live -= 1
+        if fd >= 0:
+            try:
+                loop.remove_reader(fd)
+                loop.remove_writer(fd)
+            except Exception:
+                pass
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        if pid > 0:
+            await _reap(pid)
+
+
+async def _bridge(ws: WebSocket, loop: asyncio.AbstractEventLoop, pid: int, fd: int) -> None:
+    out_q: asyncio.Queue[tuple[bytes, str]] = asyncio.Queue()
+    queued = 0          # bytes in out_q not yet handed to the socket
 
     # Non-blocking reads on the event loop: no executor thread left parked in
     # read() after close, so a fast reconnect can't race a reused fd number.
     def _on_readable() -> None:
-        try:
-            data = os.read(fd, 65536)
-        except BlockingIOError:
-            return
-        except OSError:
-            data = b""
-        out_q.put_nowait(data)
-        if not data:
+        nonlocal queued
+        # Take everything that is ready (bounded to 256 KiB) in one callback, in 64 KiB reads,
+        # so a bulk flood is not paced by one event-loop turn per read.
+        chunks: list[bytes] = []
+        got = 0
+        eof = False
+        while got < 262144:
+            try:
+                data = os.read(fd, 65536)
+            except BlockingIOError:
+                break
+            except OSError:
+                eof = True
+                break
+            if not data:
+                eof = True
+                break
+            chunks.append(data)
+            got += len(data)
+        if chunks:
+            # Backlog beats EOF: if both happen in this callback the close is 1013, not 1012
+            # (the reader is removed here, so the EOF is never queued).
+            if queued + got > OUT_Q_MAX_BYTES:
+                # The browser is not keeping up: stop reading, let what is queued drain in
+                # order, then close; the client reconnects and herdr repaints.
+                out_q.put_nowait((b"", "backlog"))
+                loop.remove_reader(fd)
+                return
+            queued += got
+            out_q.put_nowait((b"".join(chunks), ""))
+        if eof:
+            out_q.put_nowait((b"", "exit"))
             loop.remove_reader(fd)
 
     loop.add_reader(fd, _on_readable)
@@ -159,16 +243,26 @@ async def terminal(ws: WebSocket) -> None:
     ring = bytearray()
 
     async def pump_out() -> None:
+        nonlocal queued
         while True:
-            data = await out_q.get()
-            if not data:
-                break
-            ring.extend(data)
-            if len(ring) > _RING:
-                del ring[:len(ring) - _RING]
-            try:
-                await ws.send_bytes(data)
-            except Exception:
+            data, why = await out_q.get()
+            if data:
+                queued -= len(data)
+                ring.extend(data)
+                if len(ring) > _RING:
+                    del ring[:len(ring) - _RING]
+                try:
+                    await ws.send_bytes(data)
+                except Exception:
+                    break
+            if why:
+                try:
+                    if why == "backlog":
+                        await ws.close(code=1013, reason="output backlog")
+                    else:
+                        await ws.close(code=1012, reason="herdr client exited")
+                except Exception:
+                    pass
                 break
 
     # Input is queued and drained as the pty accepts it. A raw pty takes only
@@ -244,17 +338,13 @@ async def terminal(ws: WebSocket) -> None:
             elif obj is not None and obj.get("type") == "input":
                 if settings.enable_writes:
                     _write(str(obj.get("data", "")).encode())
+            elif obj is not None and "type" in obj:
+                continue                                 # unknown control type: dropped
             elif settings.enable_writes:                 # plain keystroke text
                 _write(text.encode())
     except WebSocketDisconnect:
         pass
     finally:
-        _live -= 1
         out.cancel()
         loop.remove_reader(fd)
         loop.remove_writer(fd)
-        try:
-            os.close(fd)
-        except OSError:
-            pass
-        await _reap(pid)
