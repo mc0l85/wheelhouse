@@ -663,9 +663,9 @@
       "timeout": 300,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:38:21-06:00",
+        "at": "2026-11-15T16:28:32-06:00",
         "rc": 1,
-        "head": "144bb9f"
+        "head": "adcb035"
       }
     },
     {
@@ -752,9 +752,32 @@
       "timeout": 1500,
       "status": "red",
       "red_proven": {
-        "at": "2026-11-15T15:39:21-06:00",
+        "at": "2026-11-15T16:29:22-06:00",
         "rc": 1,
-        "head": "144bb9f"
+        "head": "adcb035"
+      }
+    },
+    {
+      "id": "C-16",
+      "title": "e2e exact bytes, real keys: hardware Enter mid-composition \u2192 hel\\r then \\r; dictation \"ok\" + typed \"ok\" \u2192 okok; autocorrect collapsed caret teh\u2192the \u2192 7f 7f he",
+      "phase": "P1",
+      "lane": "C",
+      "class": "fixture-test",
+      "check": "frontend/e2e/check_items.sh C-16",
+      "files": [
+        "frontend/e2e/acceptance_e2e.py",
+        "frontend/e2e/check_items.sh",
+        "frontend/e2e/run_e2e.py",
+        "frontend/e2e/build_remote.sh"
+      ],
+      "builder": "sonnet",
+      "network": true,
+      "timeout": 1500,
+      "status": "red",
+      "red_proven": {
+        "at": "2026-11-15T16:29:42-06:00",
+        "rc": 1,
+        "head": "adcb035"
       }
     },
     {
@@ -918,13 +941,13 @@
     "backend/tests/fakes/herdr_record.py": "435648e21bb7c79201c3011ac048de157eb17fcd043fa25853d7f328d21ada9e",
     "backend/tests/make_test_venv.sh": "dd4c914eaa2cf4051a5cfc5184c560478441ec3e7469791a5c36dda79e044f61",
     "backend/tests/requirements-test.txt": "b006188eec3f998cf7157fbdc2a7704c06af9ce7f80929f2ed843df9e3465c36",
-    "frontend/e2e/acceptance_e2e.py": "5ac24ebbbfb2383add9b2ea41774592f2cc80fa05040b7390efc47f71542e3f3",
+    "frontend/e2e/acceptance_e2e.py": "e0b23956d94f09473ba149a0287014ede4766ddbec5e3c96c5f2b38c350f4e0c",
     "frontend/e2e/build_remote.sh": "571038def16b416dca18e7c3ddeba17ec5169ea133b6f53e7b2cc165652c577f",
     "frontend/e2e/check_items.sh": "78574112969dea0c12f6583fbee0685e1f03eb9cf044a8a52fff59c0dd6908a4",
     "frontend/e2e/run_e2e.py": "53fb89058dec647826462f9b6aa39fb1df53e9167f3aef8178d72a6e2fb1a8f0",
     "frontend/test/acceptance/c1.test.ts": "d8025107e2e3007f63ec03cd70b0bfa9044625c1eedb08c00062bd1e214a151e",
     "frontend/test/acceptance/c10.test.ts": "666a1e4cd85a9c5bc792d08a4ba0d8ee2dbef9eccdd081922f54c0b84564004b",
-    "frontend/test/acceptance/c11.test.ts": "85df190cb1036b22813819568d587822eb709f629744f8e3711d43344f1e3104",
+    "frontend/test/acceptance/c11.test.ts": "a33f7045555df31ac60da2f965b76e80a667474d5826601d22049aec4976561a",
     "frontend/test/acceptance/c12.test.ts": "c59551e19a2b719acde631b59be14cd8ea204d23eb2fdf160f82f1c0c5e63f0b",
     "frontend/test/acceptance/c13.test.ts": "c448d4833c9d98cd09649445a5e685ba3f35c3d6ffcfe5d6808f5a135ab7f87f",
     "frontend/test/acceptance/c14.test.ts": "23e9b5f99f91b0d546d6685b0793596469fd0e3ea7101a882046091c4158b6e2",
@@ -945,5 +968,5 @@
     "frontend/test/acceptance/helpers/mic.ts": "e1d6977b6ec28eaf4fc36f7e4714820bc6977fbeb30cbf4672943da77f40ed4a",
     "frontend/vitest.config.ts": "0f8e27f84bcbad6fa87a5d452533498974f1623b8d92e6e6bc329370e9904034"
   },
-  "locked_at": "2026-11-15T16:21:49-06:00"
+  "locked_at": "2026-11-15T16:27:20-06:00"
 }

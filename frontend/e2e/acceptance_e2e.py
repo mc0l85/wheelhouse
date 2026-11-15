@@ -39,6 +39,8 @@ ITEMS = {
              "dictation-rewrite-composition", "predictive", "hardware", "paste-breakout",
              "ctrl-composition", "ctrl-key", "tray-clear", "reset-mid-composition"],
     "D-6": ["close-message", "never-open", "mic-blocked", "mic-enter"],
+    "C-16": ["enter-mid-composition", "repeat-after-dictation-composition", "repeat-after-dictation-insertText",
+             "autocorrect-collapsed"],
 }
 
 
@@ -344,6 +346,67 @@ def main():
             warned = any(t.split("|", 1)[0].split().count("bad") for t in toasts)
             record("osc52-cap", small_ok and ignored and warned,
                    {"small_copied": small_ok, "big_ignored": ignored, "bad_toast": warned, "toasts": toasts[-3:]})
+        # ---- C-16: exact bytes on the socket, real key events ---------------------------
+        def clear_ta():
+            dpg.evaluate("() => { const t = document.querySelector('.xterm-helper-textarea'); t.value = ''; t.focus(); }")
+        if "enter-mid-composition" in wanted:
+            clear_ta()
+            desk_term.sent.clear()
+            for step in (["start", ""], ["update", "h"], ["update", "he"], ["update", "hel"]):
+                dpg.evaluate(COMP_STEP_JS, step)
+            dpg.wait_for_timeout(150)
+            dpg.keyboard.press("Enter")                             # real keydown: xterm finalizes the composition
+            dpg.evaluate(COMP_STEP_JS, ["end", "hel"])              # the browser's compositionend follows
+            dpg.wait_for_timeout(150)
+            first = bytes(desk_term.sent)
+            dpg.keyboard.press("Enter")                             # a second Enter within 300 ms
+            dpg.wait_for_timeout(800)
+            raw = bytes(desk_term.sent)
+            record("enter-mid-composition", first == b"hel\r" and raw == b"hel\r\r",
+                   {"after_first_enter": repr(first), "raw": repr(raw)})
+        for mode in ("composition", "insertText"):
+            name = f"repeat-after-dictation-{mode}"
+            if name not in wanted:
+                continue
+            dpg.wait_for_timeout(1700)                              # outside any earlier commit's duplicate window
+            clear_ta()
+            desk_term.sent.clear()
+            if mode == "composition":                             # a one-shot dictation commit "ok"
+                for step in (["start", ""], ["update", "ok"], ["end", "ok"]):
+                    dpg.evaluate(COMP_STEP_JS, step)
+            else:
+                dpg.evaluate("""() => { const ta = document.querySelector('.xterm-helper-textarea');
+                  ta.dispatchEvent(new InputEvent('beforeinput', {inputType:'insertText', data:'ok', bubbles:true, cancelable:true}));
+                  ta.value = 'ok'; ta.setSelectionRange(2, 2);
+                  ta.dispatchEvent(new InputEvent('input', {inputType:'insertText', data:'ok', bubbles:true})); }""")
+            dpg.wait_for_timeout(200)
+            dpg.keyboard.type("ok", delay=40)                       # real keys, well inside 1 s
+            dpg.wait_for_timeout(800)
+            raw = bytes(desk_term.sent)
+            record(name, raw == b"okok", {"raw": repr(raw)})
+        if "autocorrect-collapsed" in wanted:
+            # "teh" composed, then an autocorrect tap replaces it with "the" with a COLLAPSED caret at the
+            # end. Chromium gives no usable getTargetRanges() for a textarea (recorded), so the replaced
+            # span can only come from the textarea before/after: prefix-minimal 7f 7f "he".
+            clear_ta()
+            desk_term.sent.clear()
+            dpg.evaluate(COMPOSE_JS, "teh")
+            typed = bytes(desk_term.sent)
+            ranges = dpg.evaluate("""() => { const ta = document.querySelector('.xterm-helper-textarea');
+              ta.setSelectionRange(3, 3);
+              let n = -1;
+              const peek = (e) => { n = e.getTargetRanges().length; };
+              ta.addEventListener('beforeinput', peek, { once: true });
+              // no targetRanges: a real textarea autocorrect in Chromium reports none (its text lives in a
+              // user-agent shadow tree that StaticRange cannot address)
+              ta.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertReplacementText', data: 'the', bubbles: true, cancelable: true }));
+              ta.value = 'the'; ta.setSelectionRange(3, 3);
+              ta.dispatchEvent(new InputEvent('input', { inputType: 'insertReplacementText', data: 'the', bubbles: true }));
+              return n; }""")
+            dpg.wait_for_timeout(600)
+            raw = bytes(desk_term.sent)
+            record("autocorrect-collapsed", typed == b"teh" and raw == b"teh\x7f\x7fhe",
+                   {"typed": repr(typed), "raw": repr(raw), "getTargetRanges_len": ranges})
         dctx.close()
 
         # ---- C-15: touch keyboards (Controls shows the key rows) ------------------------
@@ -432,13 +495,16 @@ def main():
             record("never-open", hits >= 2, {"terminal_handshakes": hits})
             nctx.close()
         if "reset-mid-composition" in wanted:
-            # the socket drops mid-composition; an update while it is down cannot be sent (send() false);
-            # after the reopen the next correction must not backspace text the new client never got
+            # the socket drops mid-composition ("hel" already sent); an update while it is down cannot be
+            # sent (send() false); after the reopen the composition is ABANDONED (C-11): zero bytes for it
+            # (no "helhello", no 7f), and the next composition types normally
             r_term = Term()
             rctx, rpg = new_page(b, base, term=r_term)
+            r_term.sent.clear()
             rpg.evaluate(COMP_STEP_JS, ["start", ""])
             rpg.evaluate(COMP_STEP_JS, ["update", "hel"])
             rpg.wait_for_timeout(300)
+            before_drop = bytes(r_term.sent)
             first = r_term.connections
             r_term.ws.close(code=1011, reason="e2e drop")
             rpg.wait_for_timeout(30)
@@ -448,13 +514,19 @@ def main():
                 rpg.wait_for_timeout(100)
             rpg.wait_for_timeout(500)
             r_term.sent.clear()
-            rpg.evaluate(COMP_STEP_JS, ["update", "hex"])
-            rpg.evaluate(COMP_STEP_JS, ["end", "hex"])
+            rpg.evaluate(COMP_STEP_JS, ["update", "hello"])
+            rpg.evaluate(COMP_STEP_JS, ["end", "hello"])
             rpg.wait_for_timeout(800)
-            raw = bytes(r_term.sent)
+            abandoned = bytes(r_term.sent)
+            r_term.sent.clear()
+            rpg.evaluate(COMPOSE_JS, "ok")
+            rpg.wait_for_timeout(300)
+            nxt = bytes(r_term.sent)
             reopened = r_term.connections > first
-            record("reset-mid-composition", reopened and b"\x7f" not in raw and b"x" in raw,
-                   {"reopened": reopened, "raw_after_reopen": repr(raw)})
+            record("reset-mid-composition",
+                   reopened and before_drop == b"hel" and abandoned == b"" and nxt == b"ok",
+                   {"reopened": reopened, "before_drop": repr(before_drop), "after_reopen_same_word": repr(abandoned),
+                    "next_word": repr(nxt)})
             rctx.close()
         for name, status in (("mic-blocked", "blocked"), ("mic-enter", "idle")):
             if name not in wanted:
