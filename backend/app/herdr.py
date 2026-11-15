@@ -24,6 +24,7 @@ import re
 import shlex
 import socket
 import subprocess
+import time
 from typing import Any
 
 from .config import settings
@@ -219,6 +220,41 @@ def _socket_request(method: str, params: dict) -> Any:
     if "error" in env:
         raise HerdrError(str(env["error"]))
     return env.get("result")
+
+
+def probe(timeout: float) -> str:
+    """Bounded probe of herdr's control socket. "ok": something answered with a newline-terminated
+    JSON reply (a result or an error both count). "down": no socket file / connect refused / bad
+    reply. "silent": connected but no reply within the timeout."""
+    deadline = time.monotonic() + max(0.05, timeout)
+    req = (json.dumps({"id": "web:probe", "method": "ping", "params": {}}) + "\n").encode()
+    buf = b""
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.settimeout(max(0.05, timeout))
+            s.connect(socket_path())
+            try:
+                s.sendall(req)
+                while b"\n" not in buf:
+                    left = deadline - time.monotonic()
+                    if left <= 0:
+                        return "silent"
+                    s.settimeout(left)
+                    chunk = s.recv(65536)
+                    if not chunk:
+                        return "down"
+                    buf += chunk
+            except socket.timeout:
+                return "silent"
+        json.loads(buf.split(b"\n", 1)[0])
+        return "ok"
+    except (OSError, ValueError):
+        return "down"
+
+
+def server_alive(timeout: float) -> bool:
+    """True when herdr's control socket answers within about `timeout` seconds."""
+    return probe(timeout) == "ok"
 
 
 # ---------------------------------------------------------------------------

@@ -9,8 +9,8 @@
 //  • Keystrokes go out as BINARY (so "1" isn't mistaken for a JSON control frame).
 //  • Exposes an imperative API (apiRef) so an on-screen key bar can send Esc/Tab/
 //    arrows/Ctrl-combos — essential on iOS/Android, which have no Ctrl/Esc keys.
-//  • Ctrl/Alt are STICKY modifiers: arm, then the next soft-keyboard char is
-//    transformed (Ctrl+c → 0x03, Alt+x → ESC x).
+//  • Ctrl/Alt are STICKY modifiers: tap arms one key (Ctrl+c → 0x03, Alt+x → ESC x),
+//    a double-tap locks until tapped again.
 import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
@@ -20,6 +20,12 @@ import { clipboardImage, readClipboard } from "../paste";
 import { restyleGhost, resetGhost } from "../dim";
 import type { ConnInfo, ModState, TermApi } from "../types/term";
 import { createTrace, TRACE } from "../input/trace";
+import { OSC52_MAX_BYTES, sanitizePaste } from "../input/sanitize";
+import { createModifiers, ctrlChar, type ModSource } from "../input/modifiers";
+import {
+  DUP_WINDOW_MS, initialComposerState, reduce,
+  type ComposerEvent, type DataOrigin, type ModSnapshot, type TextareaSnapshot,
+} from "../input/composer";
 import { createTerminalSocket } from "./terminalSocket";
 
 // Clipboard write that survives non-gesture / insecure-context callers: async
@@ -94,7 +100,10 @@ export function useHerdrTerminal(
   onConn?: (info: ConnInfo) => void,
   onPasteImage?: (img: Blob) => void,
   onNote?: (msg: string, bad?: boolean) => void,
+  onMods?: (m: { ctrl: ModState; alt: ModState }) => void,
 ) {
+  const modsRef = useRef(onMods);
+  modsRef.current = onMods;
   const noteRef = useRef(onNote);
   noteRef.current = onNote;
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -154,21 +163,14 @@ export function useHerdrTerminal(
     let dec = new TextDecoder();
     let disposed = false;
     let lastDims = "";
-    const armed = { ctrl: false, alt: false };
-    // Today's sticky modifier is a lock: armed maps to "locked" (three-state API, neutral mapping).
-    const modOf = (b: boolean): ModState => (b ? "locked" : "off");
+    // Sticky Ctrl/Alt (tap = once, double-tap = locked) live in input/modifiers.ts; the
+    // composer (input/composer.ts) turns IME / dictation / autocorrect events into pane bytes.
+    const mods = createModifiers({
+      now: () => performance.now(),
+      onChange: () => modsRef.current?.({ ctrl: mods.state("ctrl"), alt: mods.state("alt") }),
+    });
+    const raw = (s: string): boolean => (interactiveRef.current ? socket.send(enc.encode(s)) : true);
 
-    const raw = (s: string) => {
-      if (interactiveRef.current) socket.send(enc.encode(s));
-    };
-    const ctrlOf = (ch: string) => {
-      const c = ch.toLowerCase().charCodeAt(0);
-      if (c >= 97 && c <= 122) return String.fromCharCode(c - 96); // a→^A … z→^Z
-      if (ch === " ") return "\x00";
-      return ch;
-    };
-    // Apply sticky modifiers (lock semantics — cleared by tapping the key again)
-    // to soft/physical typed chars, then send.
     // Soft keyboards (iOS predictive text, Android Gboard) type a word as an IME
     // composition, and xterm sends nothing until the word commits. Until then
     // the pane never sees the keys: a Claude Code suggestion stays on screen and
@@ -176,85 +178,110 @@ export function useHerdrTerminal(
     // "hun it…"). So the composition is sent live, as backspaces plus the new
     // tail of the word, and xterm's own send at commit is replaced by the last
     // correction. The overlay is hidden in wheel.css: the pane echoes for real.
-    let comp: string | null = null;   // composed text the pane already has
-    let compFinal = "";               // what the composition committed as
-    let compTimer = 0;                // waiting for xterm's commit-time onData
-    let lastCommit = "", lastCommitAt = 0;   // a late xterm commit-time onData is a duplicate
-    // iOS keyboard dictation (and a re-edited word) REPLACES its previous text in
-    // xterm's textarea: every new hypothesis selects the old one and inserts the
-    // whole phrase again. xterm sends the inserted text but never the deletion,
-    // so the pane got "t" + "take" + "take a" + … ("ttaketake a…"). The replaced
-    // span is erased with backspaces first. Only a span at the end of the
-    // textarea maps onto the pane's cursor; anything else is left alone.
-    const tailSelection = () => {
-      if (!ta) return "";
-      const v = ta.value, s0 = ta.selectionStart ?? v.length, e0 = ta.selectionEnd ?? v.length;
-      return s0 < e0 && e0 === v.length ? v.slice(s0, e0) : "";
-    };
+    // iOS dictation REPLACES its previous text in xterm's textarea (every
+    // hypothesis selects the old one and inserts the whole phrase again); the
+    // composer erases only what differs, per grapheme.
     const trace = createTrace(ta);   // no-op unless built with VITE_INPUT_TRACE=1
-    let replPending: { before: string; s0: number; e0: number } | null = null;
+    let cs = initialComposerState();
+    const timers = new Map<string, number>();
+    let composing = false;           // between compositionstart and compositionend
+    let keydownNow = false, keydownDataSeen = false;   // inside a textarea keydown dispatch
+    let commitUntil = 0;             // xterm's commit-time onData may arrive until then
+    let pasting = false;             // inside term.paste()
+    const taSnap = (): TextareaSnapshot => {
+      const v = ta?.value ?? "";
+      return { value: v, selStart: ta?.selectionStart ?? v.length, selEnd: ta?.selectionEnd ?? v.length };
+    };
+    const snap = (): ModSnapshot => ({ ctrl: mods.state("ctrl"), alt: mods.state("alt") });
+    const dispatch = (event: ComposerEvent, source?: ModSource) => {
+      const r = reduce(cs, event);
+      cs = r.state;
+      for (const e of r.effects) {
+        if (e.type === "setTimer") {
+          clearTimeout(timers.get(e.id));
+          timers.set(e.id, window.setTimeout(() => {
+            timers.delete(e.id);
+            dispatch({ type: "timeout", now: performance.now(), id: e.id });
+          }, e.ms));
+        } else if (e.type === "cancelTimer") {
+          clearTimeout(timers.get(e.id)); timers.delete(e.id);
+        } else if (e.type === "clearTextarea") {
+          clearTa();
+        } else if (e.type === "toast") {
+          noteRef.current?.(e.msg, true);
+        } else mods.consume(e.m);
+      }
+      if (!r.send) return;
+      if (TRACE) trace("sent", { text: r.send });
+      if (!raw(source ? mods.apply(r.send, source) : r.send)) dispatch({ type: "sendFailed", now: performance.now() });
+    };
+    const clearTa = () => {
+      if (!ta) return;
+      ta.value = "";
+      try { ta.setSelectionRange(0, 0); } catch { /* detached */ }
+    };
     const onBeforeInput = (e: InputEvent) => {
       if (TRACE) trace("beforeinput", { inputType: e.inputType, data: e.data, composing: e.isComposing });
       if (!ta || e.isComposing) return;
-      if (e.inputType !== "insertText" && e.inputType !== "insertReplacementText") return;
-      const gone = tailSelection();
-      if (gone) { raw("\x7f".repeat(Array.from(gone).length)); if (TRACE) trace("sent", { del: Array.from(gone).length }); }
-      // xterm only sends insertText's data; a replacement's text is read back after the input lands.
-      if (e.inputType === "insertReplacementText")
-        replPending = { before: ta.value, s0: ta.selectionStart ?? 0, e0: ta.selectionEnd ?? 0 };
+      const t = taSnap();
+      dispatch({ type: "beforeinput", now: performance.now(), inputType: e.inputType, data: e.data, ta: t, mods: snap() });
     };
     const onInput = (e: Event) => {
       const ie = e as InputEvent;
       if (TRACE) trace("input", { inputType: ie.inputType, data: ie.data, composing: ie.isComposing });
-      if (!ta || !replPending) return;
-      const { before, s0, e0 } = replPending; replPending = null;
-      const ins = ta.value.slice(s0, ta.value.length - (before.length - e0));
-      if (ins) { raw(ins); if (TRACE) trace("sent", { text: ins }); }
+      if (!ta) return;
+      dispatch({ type: "input", now: performance.now(), inputType: ie.inputType, ta: taSnap() });
     };
-    const sendDiff = (from: string, to: string) => {
-      const a = Array.from(from), b = Array.from(to);
-      let i = 0;
-      while (i < a.length && i < b.length && a[i] === b[i]) i++;
-      const out = "\x7f".repeat(a.length - i) + b.slice(i).join("");
-      if (out) raw(out);
-    };
-    const finishComp = (to: string) => {
-      clearTimeout(compTimer); compTimer = 0;
-      if (comp !== null) sendDiff(comp, to);
-      comp = null;
-      lastCommit = to; lastCommitAt = performance.now();
-    };
-    // A composition that starts over a selected tail (dictation's next
-    // hypothesis, a re-edited word) replaces text the pane already has: diff from it.
     const onCompStart = () => {
-      if (compTimer) finishComp(compFinal);
-      comp = tailSelection();
-      if (TRACE) trace("compositionstart", { base: comp });
+      composing = true; commitUntil = 0;
+      if (TRACE) trace("compositionstart");
+      dispatch({ type: "compositionstart", now: performance.now(), ta: taSnap(), mods: snap() });
     };
     const onCompUpdate = (e: CompositionEvent) => {
       if (TRACE) trace("compositionupdate", { data: e.data });
-      if (comp === null) comp = "";
-      sendDiff(comp, e.data ?? "");
-      comp = e.data ?? "";
+      dispatch({ type: "compositionupdate", now: performance.now(), data: e.data ?? "", ta: taSnap(), mods: snap() });
     };
     const onCompEnd = (e: CompositionEvent) => {
+      composing = false;
+      const now = performance.now();
+      commitUntil = now + DUP_WINDOW_MS;
       if (TRACE) trace("compositionend", { data: e.data });
-      compFinal = e.data ?? comp ?? "";
-      clearTimeout(compTimer);
-      compTimer = window.setTimeout(() => finishComp(compFinal), 150);
+      dispatch({ type: "compositionend", now, data: e.data ?? "", ta: taSnap() });
+    };
+    // Called from attachCustomKeyEventHandler, which xterm runs FIRST in its keydown/keypress
+    // handling: everything xterm emits for this key (a keydown composition flush, the key's own
+    // data) is produced after this flag is set, and the flag drops once the event has finished.
+    let keyClear = 0;
+    const markKey = (e: KeyboardEvent) => {
+      if (e.type === "keyup") return;   // a keyup must not re-arm the flag: xterm's commit timer may fire after it
+      if (e.type === "keydown") { keydownNow = true; keydownDataSeen = false; } else keydownNow = true;
+      if (!composing && e.keyCode !== 229) commitUntil = 0;   // a real key: no commit is pending any more
+      clearTimeout(keyClear);
+      keyClear = window.setTimeout(() => { keydownNow = false; }, 0);
+    };
+    // Focus / mouse reports xterm generates are never modified.
+    const REPORT_RE = /^\x1b\[(?:[IO]|<\d+;\d+;\d+[Mm]|M[\s\S]{3})/;
+    const onBlur = () => {
+      composing = false;
+      dispatch({ type: "blur", now: performance.now() });
     };
     const onKeystroke = (d: string) => {
       if (TRACE) trace("onData", { data: d.length > 80 ? d.slice(0, 80) + "…" : d });
-      if (compTimer) {
-        if (d === compFinal) { finishComp(d); return; }   // xterm's commit: already sent
-        finishComp(compFinal);
-      } else if (d.length > 1 && d === lastCommit && performance.now() - lastCommitAt < 1500) {
-        lastCommit = ""; return;                           // xterm's commit arriving after the 150 ms wait
-      }
-      let out = d;
-      if (armed.ctrl && d.length === 1) out = ctrlOf(d);
-      if (armed.alt) out = "\x1b" + out;
-      raw(out);
+      const now = performance.now();
+      let origin: DataOrigin = "other";
+      if (composing && (cs.comp !== null || cs.abandoned === "live") && keydownNow && !keydownDataSeen) origin = "keydownFinalize";
+      else if (!keydownNow && !pasting && now < commitUntil) { origin = "commit"; commitUntil = 0; }
+      if (keydownNow) keydownDataSeen = true;
+      const source: ModSource = pasting ? "paste" : REPORT_RE.test(d) ? "report" : "key";
+      // Composition flushes and commits are not typed keys: no Ctrl/Alt on them.
+      dispatch({ type: "onData", now, data: d, origin }, origin === "other" ? source : undefined);
+    };
+    // Every paste goes through the sanitiser (ESC / C0 / C1 dropped: no bracketed-paste breakout).
+    const pasteText = (text: string) => {
+      const clean = sanitizePaste(text);
+      if (!clean) return;
+      pasting = true;
+      try { term.paste(clean); } finally { pasting = false; }
     };
     const copied = (text: string) =>
       copyText(text).then((ok) => { if (ok) copiedRef.current?.(text.length); term.focus(); return ok; });
@@ -265,10 +292,20 @@ export function useHerdrTerminal(
     };
     // herdr drag-select → OSC 52 (";c;<base64>") → system clipboard. Query form
     // ("?") is ignored: the page never reads the clipboard back to the TUI.
+    let oscToastAt = 0;           // rate limit for the over-cap toast
     const oscSub = term.parser.registerOscHandler(52, (data) => {
       const i = data.indexOf(";");
       const payload = i >= 0 ? data.slice(i + 1) : data;
       if (!payload || payload === "?") return true;
+      const bytes = Math.floor((payload.length * 3) / 4) - (payload.endsWith("==") ? 2 : payload.endsWith("=") ? 1 : 0);
+      if (bytes > OSC52_MAX_BYTES) {
+        const t = performance.now();
+        if (!oscToastAt || t - oscToastAt > 5000) {
+          oscToastAt = t;
+          noteRef.current?.("clipboard copy ignored: too large", true);
+        }
+        return true;
+      }
       try {
         const bin = atob(payload);
         const text = new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
@@ -313,17 +350,20 @@ export function useHerdrTerminal(
         // the clipboard: text is pasted like Ctrl+Shift+V; only an empty
         // clipboard still sends a raw ^V (shell quoted-insert).
         e.preventDefault(); e.stopPropagation();
-        if (plain) term.paste(plain); else raw("\x16");
+        if (plain) pasteText(plain); else raw("\x16");
         return;
       }
       if (up && typeof navigator.clipboard?.read === "function" && (!plain.trim() || IMAGE_FILE_RE.test(plain.trim()))) {
         e.preventDefault(); e.stopPropagation();
         void readClipboard().then(({ image, text }) => {
-          if (image) up(image); else if (text || plain) term.paste(text || plain); else empty();
-        }).catch(() => { if (plain) term.paste(plain); else empty(); });   // permission refused
+          if (image) up(image); else if (text || plain) pasteText(text || plain); else empty();
+        }).catch(() => { if (plain) pasteText(plain); else empty(); });   // permission refused
         return;
       }
-      if (!plain) empty();   // xterm pastes only text/plain: say so instead of nothing
+      if (!plain) { empty(); return; }   // xterm pastes only text/plain: say so instead of nothing
+      // Native text paste: take it over from xterm so it is sanitised too.
+      e.preventDefault(); e.stopPropagation();
+      pasteText(plain);
     };
     host.addEventListener("paste", onPaste, true);
 
@@ -362,6 +402,7 @@ export function useHerdrTerminal(
         term.write(mouseToHerdr ? s : s.replace(MOUSE_RE, ""));
       },
       onReset: (reopened) => {
+        dispatch({ type: "reset", now: performance.now() });   // the new client never got the old composition
         ring = []; ringLen = 0;
         resetGhost();
         if (reopened) dec = new TextDecoder();
@@ -387,7 +428,9 @@ export function useHerdrTerminal(
     ta?.addEventListener("compositionstart", onCompStart);
     ta?.addEventListener("compositionupdate", onCompUpdate);
     ta?.addEventListener("compositionend", onCompEnd);
+    ta?.addEventListener("blur", onBlur);
     term.attachCustomKeyEventHandler((e) => {
+      markKey(e);
       const shiftEnter = (e.code === "Enter" || e.code === "NumpadEnter") && e.shiftKey && !e.altKey && !e.metaKey;
       // xterm runs this for keypress too: Shift+Enter's keypress would add a bare CR.
       if (e.type !== "keydown") return !shiftEnter;
@@ -418,13 +461,18 @@ export function useHerdrTerminal(
     });
 
     apiRef.current = {
-      type: (s) => raw(s),
-      ctrlCombo: (letter) => raw(ctrlOf(letter)),
-      toggleCtrl: () => { armed.ctrl = !armed.ctrl; if (armed.ctrl) armed.alt = false; term.focus(); return modOf(armed.ctrl); },
-      toggleAlt: () => { armed.alt = !armed.alt; if (armed.alt) armed.ctrl = false; term.focus(); return modOf(armed.alt); },
+      type: (s) => {
+        const sent = raw(mods.apply(s, "tray"));
+        // On-screen Enter / ^C end the line: drop whatever xterm's textarea still holds.
+        if (s === "\r" || s === "\x03") { clearTa(); dispatch({ type: "reset", now: performance.now() }); }
+        else if (!sent) dispatch({ type: "sendFailed", now: performance.now() });
+      },
+      ctrlCombo: (letter) => raw(ctrlChar(letter) ?? letter),
+      toggleCtrl: () => { const r = mods.tap("ctrl"); term.focus(); return r; },
+      toggleAlt: () => { const r = mods.tap("alt"); term.focus(); return r; },
       focus: () => term.focus(),
-      paste: (text) => { if (interactiveRef.current) term.paste(text); },
-      armed: () => ({ ctrl: modOf(armed.ctrl), alt: modOf(armed.alt) }),
+      paste: (text) => { if (interactiveRef.current) pasteText(text); },
+      armed: () => snap(),
       // Scroll the pane whose cell rect is given (herdr layout cells) to the
       // bottom of its scrollback: one wheel-down per 3 lines, aimed at its centre.
       scrollToBottom: (rect, lines) => {
@@ -527,13 +575,15 @@ export function useHerdrTerminal(
       host.removeEventListener("touchstart", onTouchStart);
       host.removeEventListener("touchmove", onTouchMove);
       dataSub.dispose();
-      clearTimeout(compTimer);
+      for (const t of timers.values()) clearTimeout(t);
       trace.dispose();
+      clearTimeout(keyClear);
       ta?.removeEventListener("beforeinput", onBeforeInput as EventListener, true);
       ta?.removeEventListener("input", onInput, true);
       ta?.removeEventListener("compositionstart", onCompStart);
       ta?.removeEventListener("compositionupdate", onCompUpdate);
       ta?.removeEventListener("compositionend", onCompEnd);
+      ta?.removeEventListener("blur", onBlur);
       oscSub.dispose();
       host.removeEventListener("mouseup", onMouseUp);
       host.removeEventListener("paste", onPaste, true);

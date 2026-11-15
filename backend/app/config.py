@@ -27,6 +27,8 @@ class Settings:
     # here ("default") or under sessions/<name>/.
     herdr_home: str = os.path.expanduser(os.environ.get("HERDR_HOME", "~/.config/herdr"))
     cli_timeout: float = float(os.environ.get("HERDR_CLI_TIMEOUT", "15"))
+    # Attach-time probe of herdr's control socket (seconds); no reply = server not running.
+    probe_timeout: float = float(os.environ.get("HERDRWEB_PROBE_TIMEOUT", "1.5"))
 
     # --- the herdr-web service itself ---
     host: str = os.environ.get("HERDRWEB_HOST", "127.0.0.1")

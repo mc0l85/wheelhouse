@@ -31,7 +31,7 @@ export default function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [tree, setTree] = useState<Tree | null>(null);
   const [open, setOpen] = useState<Pop>(null);
-  const [mods, setMods] = useState<Mods>({ ctrl: false, alt: false });
+  const [mods, setMods] = useState<Mods>({ ctrl: "off", alt: "off" });
   const [pinned, setPinnedState] = useState(loadPin);
   const [toast, setToast] = useState<Toast | null>(null);
   const [conn, setConn] = useState<ConnState>("connecting");
@@ -58,10 +58,10 @@ export default function App() {
     void pasteImage(img, (t) => apiRef.current?.paste(t), flash);
   }, [flash]);   // apiRef is read at call time (declared just below)
   const { hostRef, apiRef } = useHerdrTerminal(session, interactive, true,
-    (n) => flash(`copied ${n} chars ✓`), onConn, onPasteImage, flash);
+    (n) => flash(`copied ${n} chars ✓`), onConn, onPasteImage, flash, setMods);
 
   // A sticky modifier lives in the terminal effect; a new session resets it.
-  useEffect(() => { setMods({ ctrl: false, alt: false }); }, [session]);
+  useEffect(() => { setMods({ ctrl: "off", alt: "off" }); }, [session]);
 
   // Size the app from the VISUAL viewport: in an iOS standalone PWA 100vh does
   // not shrink when the soft keyboard shows.
@@ -260,13 +260,18 @@ export default function App() {
         )}
         {conn !== "open" && <span className="bar-ind conn" title="reconnecting to herdr">⟳ {conn}{connMsg ? ` — ${connMsg}` : ""}</span>}
         {health && !interactive && <span className="bar-ind" title="read-only">🔒</span>}
-        {(mods.ctrl || mods.alt) && (
+        {(mods.ctrl !== "off" || mods.alt !== "off") && (
           <button {...noBlur} className="kb on mod-ind" title="modifier armed — tap to release"
             onClick={() => {
-              if (mods.ctrl) apiRef.current?.toggleCtrl();
-              if (mods.alt) apiRef.current?.toggleAlt();
-              setMods({ ctrl: false, alt: false });
-            }}>{mods.ctrl ? "Ctrl" : "Alt"} armed</button>
+              // a tap on an armed key goes once → (locked) → off; at most two taps
+              for (const m of ["ctrl", "alt"] as const) {
+                const tap = m === "ctrl" ? apiRef.current?.toggleCtrl : apiRef.current?.toggleAlt;
+                for (let i = 0; i < 2 && apiRef.current?.armed()[m] !== "off"; i++) tap?.();
+              }
+              const a = apiRef.current?.armed();
+              setMods({ ctrl: a?.ctrl ?? "off", alt: a?.alt ?? "off" });
+            }}>{[mods.ctrl !== "off" && "Ctrl", mods.alt !== "off" && "Alt"].filter(Boolean).join("+")}
+            {" "}{mods.ctrl === "locked" || mods.alt === "locked" ? "locked" : "armed"}</button>
         )}
         {interactive && <Mic flash={flash} />}
         {interactive && focused && (

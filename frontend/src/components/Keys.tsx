@@ -7,7 +7,7 @@
 // tabIndex -1, act on click. Otherwise iOS drops the soft keyboard and the
 // viewport change forces a refit + herdr redraw.
 import type { MutableRefObject } from "react";
-import type { TermApi } from "../hooks/useHerdrTerminal";
+import type { ModState, TermApi } from "../hooks/useHerdrTerminal";
 
 export const noBlur = {
   onPointerDown: (e: React.PointerEvent) => e.preventDefault(),
@@ -46,7 +46,9 @@ const COMBOS: Key[] = [
 ];
 const SYMS = ["|", "~", "/", "\\", "-", "`"];
 
-export interface Mods { ctrl: boolean; alt: boolean; }
+export interface Mods { ctrl: ModState; alt: ModState; }
+
+const modCls = (m: ModState) => (m === "off" ? "" : m === "locked" ? "on lock" : "on");
 
 function KeyBtn({ api, k: [label, cap, seq] }: { api: Api; k: Key }) {
   return (
@@ -71,7 +73,7 @@ export function ShortcutRow({ api }: { api: Api }) {
 
 function syncMods(api: Api, setMods: (m: Mods) => void) {
   const a = api.current?.armed();
-  if (a) setMods({ ctrl: a.ctrl !== "off", alt: a.alt !== "off" });
+  if (a) setMods({ ctrl: a.ctrl, alt: a.alt });
 }
 
 interface KeysProps { api: Api; mods: Mods; setMods: (m: Mods) => void; }
@@ -81,12 +83,12 @@ export function KeyRow({ api, mods, setMods }: KeysProps) {
   return (
     <div className="key-grid labeled">
       {KEYS.map((k) => <KeyBtn key={k[0]} api={api} k={k} />)}
-      <button {...noBlur} className={`kb kl ${mods.ctrl ? "on" : ""}`}
+      <button {...noBlur} className={`kb kl ${modCls(mods.ctrl)}`}
         onClick={() => { a()?.toggleCtrl(); syncMods(api, setMods); }}>
-        <span className="kl-k">Ctrl</span><span className="kl-c">hold for next key</span></button>
-      <button {...noBlur} className={`kb kl ${mods.alt ? "on" : ""}`}
+        <span className="kl-k">Ctrl</span><span className="kl-c">next key · 2x locks</span></button>
+      <button {...noBlur} className={`kb kl ${modCls(mods.alt)}`}
         onClick={() => { a()?.toggleAlt(); syncMods(api, setMods); }}>
-        <span className="kl-k">Alt</span><span className="kl-c">hold for next key</span></button>
+        <span className="kl-k">Alt</span><span className="kl-c">next key · 2x locks</span></button>
       <button {...noBlur} className="kb kl" onClick={() => a()?.focus()}>
         <span className="kl-k">Keyboard</span><span className="kl-c">show</span></button>
     </div>
