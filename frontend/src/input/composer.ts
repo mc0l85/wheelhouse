@@ -7,6 +7,11 @@ import { applyMods } from "./modifiers";
  *  composition already sent live (dropped once, PRD 4.1); later, an identical onData is always sent. */
 export const DUP_WINDOW_MS = 1500;
 
+/** An IME keydown (keyCode 229 / isComposing) is not a hardware key: Safari sends one right after compositionend. */
+export function isImeKeydown(e: { keyCode: number; isComposing?: boolean }): boolean {
+  return e.keyCode === 229 || e.isComposing === true;
+}
+
 export interface TextareaSnapshot { value: string; selStart: number; selEnd: number }
 
 export type DataOrigin = "commit" | "keydownFinalize" | "textareaChange" | "other";
@@ -63,6 +68,8 @@ export interface ComposerState {
   clearOnInput: boolean;
   /** A socket reset abandoned the composition in progress: send nothing more for it until the next compositionstart. */
   abandoned: "live" | "ended" | null;
+  /** The texts the abandoned composition could still commit (xterm's commit / flush is swallowed only if it matches). */
+  abandonedText: string[];
   /** Between compositionstart and compositionend (survives sendFailed, which forgets `comp`). */
   inComp: boolean;
 }
@@ -77,7 +84,7 @@ export function initialComposerState(): ComposerState {
   return {
     comp: null, compFinal: "", lastCommit: "", lastCommitAt: 0, replPending: null,
     ctrl: "off", alt: "off", timerArmed: false, expected: "", lastExpected: "", startLen: 0, startVal: null,
-    lead: null, adopt: null, suppress: null, clearOnInput: false, abandoned: null, inComp: false,
+    lead: null, adopt: null, suppress: null, clearOnInput: false, abandoned: null, abandonedText: [], inComp: false,
   };
 }
 
@@ -140,6 +147,12 @@ function firstSend(s: ComposerState, data: string, mods: ModSnapshot, effects: C
   };
 }
 
+/** A pending re-composition adopt whose textarea did not grow is settled as an adopt (no `input` needed). */
+function settleAdopt(s: ComposerState, ta: TextareaSnapshot): ComposerState {
+  if (s.adopt && ta.value.length === s.adopt.len) return { ...s, comp: s.adopt.data, adopt: null };
+  return s;
+}
+
 function resolveAdopt(s: ComposerState, effects: ComposerEffect[]): { state: ComposerState; send: string } {
   if (!s.adopt) return { state: s, send: "" };
   const a = s.adopt;
@@ -176,13 +189,14 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
         ...s, comp: tailSel(event.ta), lead: null, adopt: null, suppress: null, replPending: null,
         ctrl: event.mods.ctrl, alt: event.mods.alt, startLen: event.ta.value.length,
         startVal: event.ta.selStart === event.ta.selEnd && event.ta.selEnd === event.ta.value.length ? event.ta.value : null,
-        lastCommit: "", lastExpected: "", expected: "", clearOnInput: false, abandoned: null, inComp: true,
+        lastCommit: "", lastExpected: "", expected: "", clearOnInput: false, abandoned: null, abandonedText: [], inComp: true,
       }, send);
     }
 
     case "compositionupdate": {
-      if (s.abandoned) return done(s);
+      if (s.abandoned) return done(event.data ? { ...s, abandonedText: [...s.abandonedText, event.data] } : s);
       let send = "";
+      s = settleAdopt(s, event.ta);
       if (s.adopt) { const r = resolveAdopt(s, effects); s = r.state; send = r.send; }
       const data = event.data;
       if (s.comp === null) s = { ...s, comp: "", lead: null };
@@ -205,9 +219,10 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       if (s.abandoned) {
         // xterm's commit for it may follow; stop expecting one when the commit window is over.
         effects.push({ type: "setTimer", id: ABANDON_TIMER, ms: DUP_WINDOW_MS });
-        return done({ ...s, abandoned: "ended" });
+        return done({ ...s, abandoned: "ended", abandonedText: event.data ? [...s.abandonedText, event.data] : s.abandonedText });
       }
       let send = "";
+      s = settleAdopt(s, event.ta);
       if (s.adopt) { const r = resolveAdopt(s, effects); s = r.state; send = r.send; }
       if (s.comp === null) return done({ ...s, inComp: false }, send);   // already finalized (keydown) or reset: nothing to settle
       const compFinal = event.data;
@@ -271,11 +286,20 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
 
     case "onData": {
       const d = event.data;
-      if (s.abandoned && (event.origin === "commit" || event.origin === "keydownFinalize")) {
-        // xterm's flush / commit for the abandoned composition: never sent.
-        return done(event.origin === "commit" ? { ...s, abandoned: null } : s);
+      // Escape sequences (terminal query replies, key reports) are never a composition commit.
+      const origin: DataOrigin = event.origin === "commit" && d.startsWith("\x1b") ? "other" : event.origin;
+      if (s.abandoned && (origin === "commit" || origin === "keydownFinalize")) {
+        // xterm's flush / commit for the abandoned composition: swallow only what matches its text.
+        const m = longestPrefix(d, s.abandonedText);
+        const part = m === null && d !== "" && s.abandonedText.some((c) => c.startsWith(d));
+        if (m !== null || part || d === "") {
+          const next = origin === "commit" ? { ...s, abandoned: null, abandonedText: [] } : s;
+          return done(next, m !== null ? d.slice(m.length) : "");
+        }
+        // Unrelated data: send it as ordinary input; the abandonment stands.
+        return done(s, d);
       }
-      if (event.origin === "keydownFinalize") {
+      if (origin === "keydownFinalize") {
         if (s.comp === null) return done(s, d);
         // xterm's flush can be empty when it has not yet seen the composed text: never erase the pane for that.
         const r = d === "" ? { send: "" } : diffComp(s, s.comp, d);
@@ -286,11 +310,11 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
         return done({ ...s, suppress: null });
       }
       if (s.timerArmed) {
-        const m = event.origin === "commit" ? longestPrefix(d, [s.expected, s.compFinal]) : null;
+        const m = origin === "commit" ? longestPrefix(d, [s.expected, s.compFinal]) : null;
         const r = finishComp(s, event.now, m === null, effects);
         return done(r.state, r.send + (m === null ? d : d.slice(m.length)));
       }
-      if (event.origin === "commit" && s.lastCommit !== "" && event.now - s.lastCommitAt < DUP_WINDOW_MS) {
+      if (origin === "commit" && s.lastCommit !== "" && event.now - s.lastCommitAt < DUP_WINDOW_MS) {
         const m = longestPrefix(d, [s.lastExpected, s.lastCommit]);
         if (m !== null) return done({ ...s, lastCommit: "", lastExpected: "" }, d.slice(m.length));
       }
@@ -303,7 +327,7 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
         return done(r.state, r.send);
       }
       if (event.id === SUPPRESS_TIMER) return done({ ...s, suppress: null });
-      if (event.id === ABANDON_TIMER) return done({ ...s, abandoned: s.abandoned === "ended" ? null : s.abandoned });
+      if (event.id === ABANDON_TIMER) return done(s.abandoned === "ended" ? { ...s, abandoned: null, abandonedText: [] } : s);
       return done(s);
     }
 
@@ -324,7 +348,10 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       // sendFailed outside a composition: the textarea's tail no longer matches the pane, so a later
       // selected-tail replacement must not erase text that never arrived.
       if (event.type === "sendFailed" && !s.inComp) effects.push({ type: "clearTextarea" });
-      return done({ ...initialComposerState(), startLen: s.startLen, abandoned,
+      // What the abandoned composition could still commit, and an expiry for the "ended" case.
+      const abandonedText = abandoned ? [s.expected, s.compFinal, s.comp ?? "", s.adopt?.data ?? ""].filter((x) => x !== "") : [];
+      if (abandoned === "ended") effects.push({ type: "setTimer", id: ABANDON_TIMER, ms: DUP_WINDOW_MS });
+      return done({ ...initialComposerState(), startLen: s.startLen, abandoned, abandonedText,
         inComp: event.type === "sendFailed" && s.inComp });
     }
   }

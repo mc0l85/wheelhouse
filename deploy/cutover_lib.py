@@ -1152,6 +1152,32 @@ class Cutover:
               f"result: {self.state}/latest/result.json")
         return 0
 
+    def cgroup_path(self, reader=None) -> str:
+        """The caller's cgroup path; `reader` is injectable for tests (returns /proc/self/cgroup text)."""
+        try:
+            # HW_TEST_CGROUP_FILE is a test-only injection point (offline fixtures run from whatever cgroup they are in)
+            text = reader() if reader else Path(os.environ.get("HW_TEST_CGROUP_FILE") or "/proc/self/cgroup").read_text()
+        except OSError as e:
+            raise Usage(f"cannot read /proc/self/cgroup: {e}")
+        lines = text.splitlines()
+        return lines[-1].split(":", 2)[2] if lines and lines[-1].count(":") >= 2 else ""
+
+    def rollback_needs_detach(self, reader=None) -> bool:
+        """A rollback stops herdr.service and the web unit: from a pane inside either, that is its own cgroup."""
+        path = self.cgroup_path(reader)
+        return any(self.v[k] in path for k in ("HERDR_UNIT", "WEB_UNIT"))
+
+    def detach_rollback(self, self_path: str, host_env: str) -> int:
+        cmd = ["systemd-run", "--unit=herdr-rollback", "--collect", "--description=herdr rollback",
+               self_path, "--host-env", host_env, "--rollback", "--require-unit"]
+        log("launching rollback detached: " + " ".join(cmd))
+        p = subprocess.run(self.privileged(*cmd), capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        if p.returncode != 0:
+            raise Usage(f"systemd-run failed ({p.returncode}): {p.stderr.strip()}")
+        print("rollback launched as unit herdr-rollback. Follow it: sudo journalctl -u herdr-rollback -f; "
+              f"result: {self.state}/latest/result.json")
+        return 0
+
     def check_cgroup(self) -> None:
         """The cutover stops the web unit (and with it everything in its cgroup, including the coordinator's
         pane): refuse to run from inside any unit it stops, and from a detached launch outside its own unit."""
@@ -1287,6 +1313,11 @@ def main(argv: list[str]) -> int:
         c = Cutover(load_host_env(host_env), args)
         if args.rollback:
             c.preflight_rollback()
+            if args.require_unit:                        # detached: ignore the signals the unit churn can send
+                for sig in (signal.SIGHUP, signal.SIGTERM):
+                    signal.signal(sig, signal.SIG_IGN)
+            elif c.rollback_needs_detach():
+                return c.detach_rollback(args.self_path, host_env)
             return c.do_rollback()
         c.preflight()
         if args.dry_run:

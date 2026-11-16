@@ -23,7 +23,7 @@ import { createTrace, TRACE } from "../input/trace";
 import { OSC52_MAX_BYTES, sanitizePaste } from "../input/sanitize";
 import { createModifiers, ctrlChar, type ModSource } from "../input/modifiers";
 import {
-  DUP_WINDOW_MS, initialComposerState, reduce,
+  DUP_WINDOW_MS, initialComposerState, isImeKeydown, reduce,
   type ComposerEvent, type DataOrigin, type ModSnapshot, type TextareaSnapshot,
 } from "../input/composer";
 import { createTerminalSocket } from "./terminalSocket";
@@ -253,6 +253,7 @@ export function useHerdrTerminal(
     // data) is produced after this flag is set, and the flag drops once the event has finished.
     let keyClear = 0;
     const markKey = (e: KeyboardEvent) => {
+      if (isImeKeydown(e)) return;   // an IME keydown (Safari sends it after compositionend) is not a hardware key
       if (e.type === "keyup") return;   // a keyup must not re-arm the flag: xterm's commit timer may fire after it
       if (e.type === "keydown") { keydownNow = true; keydownDataSeen = false; } else keydownNow = true;
       if (!composing && e.keyCode !== 229) commitUntil = 0;   // a real key: no commit is pending any more
@@ -270,7 +271,7 @@ export function useHerdrTerminal(
       const now = performance.now();
       let origin: DataOrigin = "other";
       if (composing && (cs.comp !== null || cs.abandoned === "live") && keydownNow && !keydownDataSeen) origin = "keydownFinalize";
-      else if (!keydownNow && !pasting && now < commitUntil) { origin = "commit"; commitUntil = 0; }
+      else if (!keydownNow && !pasting && now < commitUntil && !d.startsWith("\x1b")) { origin = "commit"; commitUntil = 0; }
       if (keydownNow) keydownDataSeen = true;
       const source: ModSource = pasting ? "paste" : REPORT_RE.test(d) ? "report" : "key";
       // Composition flushes and commits are not typed keys: no Ctrl/Alt on them.
