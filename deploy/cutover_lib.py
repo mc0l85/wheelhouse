@@ -138,7 +138,10 @@ def atomic_write(path: Path, data: bytes, mode: int, like: os.stat_result | None
     if owner is None and like is not None:
         owner = (like.st_uid, like.st_gid)
     if owner is not None and os.geteuid() == 0:
-        os.chown(tmp, *owner)
+        try:
+            os.chown(tmp, *owner)
+        except OSError as e:                       # e.g. an unmapped uid in a user namespace
+            log(f"warning: cannot chown {path} to {owner}: {e}")
     os.replace(tmp, path)
 
 
