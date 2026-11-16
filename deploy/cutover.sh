@@ -15,7 +15,8 @@
 #                     re-executes itself detached: systemd-run --unit=herdr-cutover ... --foreground,
 #                     so stopping the web unit cannot kill the cutover (or the coordinator's pane).
 #   --coordinator P   the pane that launched the cutover: quit last, relaunched last, resumed last.
-#                     Default: $HERDR_PANE_ID.
+#                     Default: $HERDR_PANE_ID, which sudo drops: as root it is then required, or pass
+#                     --no-coordinator when launching from outside herdr.
 #
 # Exit: 0 done | 2 usage / config / preflight (nothing touched) | 3 aborted before step 4 (nothing
 # changed) | 4 failed in step 5 or 6 and rolled back | 5 finished, problems recorded in steps 7-9.

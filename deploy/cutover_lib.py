@@ -127,15 +127,18 @@ def read_env_file(path: Path) -> dict:
 
 # ---------------------------------------------------------------------------------------- files
 
-def atomic_write(path: Path, data: bytes, mode: int, like: os.stat_result | None = None) -> None:
+def atomic_write(path: Path, data: bytes, mode: int, like: os.stat_result | None = None,
+                 owner: tuple[int, int] | None = None) -> None:
     tmp = path.with_name("." + path.name + ".cutover-tmp")
     with open(tmp, "wb") as f:
         f.write(data)
         f.flush()
         os.fsync(f.fileno())
     os.chmod(tmp, mode)
-    if like is not None and os.geteuid() == 0:
-        os.chown(tmp, like.st_uid, like.st_gid)
+    if owner is None and like is not None:
+        owner = (like.st_uid, like.st_gid)
+    if owner is not None and os.geteuid() == 0:
+        os.chown(tmp, *owner)
     os.replace(tmp, path)
 
 
@@ -171,28 +174,50 @@ def tab_count(session_json: Path) -> int:
 
 # ---------------------------------------------------------------------------------------- relaunch argv
 
+BOOL_FLAGS = {"--dangerously-skip-permissions", "--allow-dangerously-skip-permissions", "--verbose", "--debug",
+              "--ide", "--strict-mcp-config", "--no-session-persistence", "--no-session", "--offline", "--no-tools",
+              "--continue", "-c", "-v", "--version"}
+SESSION_FLAGS = ("--resume", "-r", "--session")
+
+
+def agent_index(argv: list | None, agent: str) -> int | None:
+    """Index of the first argv element whose basename is the agent (a node-run agent has it at 1+)."""
+    for i, a in enumerate(argv or []):
+        if os.path.basename(str(a)) == agent:
+            return i
+    return None
+
+
 def relaunch_argv(agent: str, session: dict | None, fg_argv: list | None, resumable: bool) -> list:
-    """[argv0] + kept flags + --resume <uuid> / --session <path>; fresh (no transcript) -> no session flag."""
-    argv0 = agent
+    """[agent path] + the flags after it + --resume <uuid> / --session <path> (none when fresh).
+
+    Whatever precedes the agent element (an interpreter) is dropped, session flags and --continue are
+    replaced, and positional prompt arguments are dropped. A word right after a flag is that flag's value
+    unless the flag is a known boolean; a word anywhere else is a prompt."""
+    idx = agent_index(fg_argv, agent)
+    cmd = str(fg_argv[idx]) if idx is not None else agent
     rest: list[str] = []
-    if fg_argv:
-        if os.path.basename(fg_argv[0]) == agent:
-            argv0 = fg_argv[0]
-        i = 1
-        while i < len(fg_argv):
-            a = fg_argv[i]
-            if a in ("--resume", "-r", "--session"):
-                i += 2
-                continue
-            if a.startswith("--resume=") or a.startswith("--session="):
-                i += 1
-                continue
-            if a in ("--continue", "-c"):
-                i += 1
-                continue
-            rest.append(a)
+    args = [str(a) for a in fg_argv[idx + 1:]] if idx is not None else []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        nxt = args[i + 1] if i + 1 < len(args) else None
+        takes_value = nxt is not None and not nxt.startswith("-")
+        if a in SESSION_FLAGS:
+            i += 2 if takes_value else 1                      # never eat the next flag
+            continue
+        if a.startswith("--resume=") or a.startswith("--session=") or a in ("--continue", "-c"):
             i += 1
-    out = [argv0] + rest
+            continue
+        if a.startswith("-"):
+            rest.append(a)
+            if "=" not in a and a not in BOOL_FLAGS and takes_value:
+                rest.append(nxt)
+                i += 1
+            i += 1
+            continue
+        i += 1                                                # positional: a prompt, dropped
+    out = [cmd] + rest
     if resumable and session:
         out += ["--resume" if agent == "claude" else "--session", session["value"]]
     return out
@@ -370,9 +395,59 @@ class Cutover:
                 continue
             if stat.split(") ", 1)[1][0] == "Z":
                 continue
-            if any(argv[i] == self.herdr_bin and argv[i + 1] == "server" for i in range(min(2, len(argv) - 1))):
+            if any(argv[i] == self.herdr_bin and argv[i + 1:] == ["server"] for i in range(min(2, len(argv)))):
                 out.append(int(d.name))
         return sorted(out)
+
+    def find_orphans(self, rows: list[dict]) -> list[dict]:
+        """Processes in the legacy web unit's cgroup that stopping it will kill but that are not a herdr
+        server, a pane shell/agent or one of their descendants (e.g. a tmux'd `claude remote-control`)."""
+        procs: list[int] = []
+        unit = self.v["OLD_WEB_UNIT"]
+        for base in (f"/sys/fs/cgroup/system.slice/{unit}", f"/sys/fs/cgroup/systemd/system.slice/{unit}"):
+            try:
+                procs = [int(x) for x in Path(base, "cgroup.procs").read_text().split()]
+                break
+            except (OSError, ValueError):
+                continue
+        if not procs:
+            return []
+        ppid: dict[int, int] = {}
+        for d in Path("/proc").iterdir():
+            if d.name.isdigit():
+                try:
+                    ppid[int(d.name)] = int((d / "stat").read_text().rsplit(") ", 1)[1].split()[1])
+                except (OSError, ValueError, IndexError):
+                    pass
+
+        def subtree(roots: set[int]) -> set[int]:
+            seen, grew = set(roots), True
+            while grew:
+                grew = False
+                for pid, pp in ppid.items():
+                    if pp in seen and pid not in seen:
+                        seen.add(pid)
+                        grew = True
+            return seen
+        roots = set(self.server_pids())
+        for r in rows:
+            if r.get("pid"):
+                roots.add(int(r["pid"]))
+            if r.get("shell_pid"):
+                roots.add(int(r["shell_pid"]))
+        known = subtree(roots)
+        out = []
+        for pid in procs:
+            if pid in known:
+                continue
+            try:
+                argv = [a.decode(errors="replace") for a in Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0") if a]
+            except OSError:
+                continue
+            if not argv or any("uvicorn" in a for a in argv) or argv[0] == self.herdr_bin:
+                continue                                   # the web app itself and its herdr clients
+            out.append({"pid": pid, "argv": argv})
+        return out
 
     def socket_refuses(self) -> bool:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -537,9 +612,9 @@ class Cutover:
                     row["session"] = {"kind": sref.get("kind"), "value": sref["value"]}
                 try:
                     info = self.herdr("pane", "process-info", "--pane", p["pane_id"])
+                    row["shell_pid"] = (info.get("process_info") or {}).get("shell_pid")
                     fgs = (info.get("process_info") or {}).get("foreground_processes") or []
-                    fg = next((f for f in fgs if os.path.basename((f.get("argv") or [""])[0]) == ag), None) \
-                        or (fgs[0] if fgs else None)
+                    fg = next((f for f in fgs if agent_index(f.get("argv"), ag) is not None), None)
                     if fg:
                         row["argv"] = fg.get("argv") or None
                         row["pid"] = fg.get("pid")
@@ -558,8 +633,13 @@ class Cutover:
         if no_session:
             raise Abort("agent pane(s) with no session reference: " + ", ".join(no_session)
                         + " (an agent stuck on a dialog? answer it and re-run)")
+        orphans = self.find_orphans(rows)
+        for o in orphans:
+            log(f"warning: pid {o['pid']} in {self.v['OLD_WEB_UNIT']} is not a pane process and dies at step 4: "
+                + shlex.join(o["argv"]))
         self.manifest = {"run_id": self.run_id, "started_at": self.result["started_at"], "coordinator": coordinator,
-                         "tab_count": tabs, "panes": rows}
+                         "tab_count": tabs, "panes": rows, "orphans": orphans}
+        self.result["orphans"] = orphans
         if write:
             self.run_dir.mkdir(parents=True)
             self.save_json("manifest.json", self.manifest)
@@ -679,10 +759,16 @@ class Cutover:
         restored = None
         live = self.herdr_home / "session.json"
         if not self.session_fits(live):
+            existed = live.exists()
+            if existed:
+                shutil.copyfile(live, self.run_dir / "session.json.at-stop")
             for name in ("session.json.after-quit", "session.json"):
                 if self.session_fits(self.run_dir / name):
                     self.mark(session_restored=True)
                     shutil.copyfile(self.run_dir / name, live)
+                    if not existed:                       # never leave a root-owned file in the service user's home
+                        os.chown(live, os.stat(self.herdr_home).st_uid, os.stat(self.herdr_home).st_gid) \
+                            if os.geteuid() == 0 else None
                     restored = name
                     break
             if not self.session_fits(live):
@@ -772,12 +858,41 @@ class Cutover:
             raise StepFailed(f"pane count after the restore is {len(self.safe_panes())}, the manifest has {want}")
         # the nightly script: the old one is kept in the run dir
         had = self.update_script.exists()
-        self.mark(update_script_replaced=True, old_update_script=had)
-        like = os.stat(self.update_script if had else self.update_script.parent)
+        old_mode = (os.stat(self.update_script).st_mode & 0o7777) if had else None
+        self.mark(update_script_replaced=True, old_update_script=had, old_update_mode=old_mode)
         if had:
             shutil.copy2(self.update_script, self.run_dir / "old-update-script")
-        atomic_write(self.update_script, (HERE / "herdr-update.sh").read_bytes(), 0o755, like)
+        atomic_write(self.update_script, (HERE / "herdr-update.sh").read_bytes(), 0o777,
+                     like=None, owner=self.service_ids())
         self.step(6, True, server_pid=servers[0], pane_count=want)
+
+    def service_ids(self) -> tuple[int, int]:
+        import grp
+        try:
+            gid = grp.getgrnam(self.v["SERVICE_GROUP"]).gr_gid
+        except KeyError:
+            gid = pwd.getpwnam(self.v["SERVICE_USER"]).pw_gid
+        return int(self.v["SERVICE_UID"]), gid
+
+    def finalize_files(self) -> None:
+        """Files this run created for the service user: owned by it, mode 777. Never touches the old tree or
+        the old unit (restored byte for byte), nor UNIT_DIR files (root-owned, 644)."""
+        try:
+            uid, gid = self.service_ids()
+            targets = [self.run_dir, self.state / "latest"]
+            if self.run_dir.is_dir():
+                targets += [self.run_dir / n for n in os.listdir(self.run_dir)]
+            for t in targets:
+                try:
+                    if os.geteuid() == 0:
+                        os.lchown(t, uid, gid)
+                    if not t.is_symlink():
+                        if t.is_dir() or t.is_file():
+                            os.chmod(t, 0o777)
+                except OSError:
+                    pass
+        except Exception as e:                                    # cosmetic: never fail the run for it
+            log(f"could not fix ownership of the run files: {e}")
 
     def safe_panes(self) -> list[dict]:
         try:
@@ -795,6 +910,19 @@ class Cutover:
         self.result["agents"].append(a)
         return a
 
+    def session_is(self, pane_id: str, want: str | None) -> tuple[bool, str | None]:
+        """Poll up to RELAUNCH_WAIT_S for the pane's agent session to equal `want` (herdr reports it late)."""
+        seen: list = [None]
+
+        def ok() -> bool:
+            try:
+                p = self.pane(pane_id)
+            except RuntimeError:
+                return False
+            seen[0] = ((p or {}).get("agent_session") or {}).get("value")
+            return want is None or seen[0] == want
+        return self.wait_for(ok, self.t_relaunch, 0.2), seen[0]
+
     def relaunch(self, rows: list[dict], wait_native: bool = True) -> None:
         for row in rows:
             pane, res = row["pane_id"], self.agent_result(row["pane_id"])
@@ -809,8 +937,7 @@ class Cutover:
                     continue
                 if cur.get("agent"):
                     res["native"] = True
-                    val = (cur.get("agent_session") or {}).get("value")
-                    res["session_match"] = want is None or val == want
+                    res["session_match"], val = self.session_is(pane, want)
                     if not res["session_match"]:
                         self.problem(f"{pane}: resumed natively with session {val!r}, the manifest has {want!r}")
                     continue
@@ -823,8 +950,7 @@ class Cutover:
                     self.problem(f"{pane}: {row['agent']} did not appear after the relaunch")
                     continue
                 if row["action"] == "resume":
-                    val = ((self.pane(pane) or {}).get("agent_session") or {}).get("value")
-                    res["session_match"] = val == want
+                    res["session_match"], val = self.session_is(pane, want)
                     if not res["session_match"]:
                         self.problem(f"{pane}: relaunched with session {val!r}, the manifest has {want!r}")
                 else:
@@ -847,7 +973,7 @@ class Cutover:
                 continue
             try:
                 r = self.herdr("agent", "wait", pane, "--until", "idle", "--until", "blocked",
-                               "--timeout", str(int(self.t_idle * 1000)), timeout=self.t_idle + 15)
+                               "--timeout", str(int(self.t_idle / 2 * 1000)), timeout=self.t_idle / 2 + 15)
                 if (r.get("agent") or {}).get("agent_status") == "blocked":
                     res["skipped"] = "blocked on a dialog"
                     self.problem(f"{pane}: blocked after the relaunch; `resume` not sent")
@@ -951,7 +1077,8 @@ class Cutover:
             def restore_update():
                 src = run_dir / "old-update-script"
                 like = os.stat(self.update_script) if self.update_script.exists() else None
-                atomic_write(self.update_script, src.read_bytes(), os.stat(src).st_mode & 0o7777, like)
+                mode = progress.get("old_update_mode")
+                atomic_write(self.update_script, src.read_bytes(), mode if mode is not None else 0o755, like)
             attempt("restore the nightly script", restore_update)
         elif progress.get("update_script_replaced"):
             errors.append("the host had no nightly script before; the installed one was left in place")
@@ -960,7 +1087,7 @@ class Cutover:
             attempt("enable the legacy web unit", lambda: self.systemctl("enable", v["OLD_WEB_UNIT"]))
         if progress.get("old_web_stop_started"):
             attempt("start the legacy web unit", lambda: self.systemctl("start", v["OLD_WEB_UNIT"]))
-        progress["rolled_back"] = True
+        progress["rolled_back"] = not errors
         progress["rollback_errors"] = errors
         (run_dir / "progress.json").write_text(json.dumps(progress, indent=1))
         return not errors
@@ -1011,7 +1138,9 @@ class Cutover:
             cmd.append("--force")
         if self.args.coordinator:
             cmd += ["--coordinator", self.args.coordinator]
-        cmd.append("--foreground")
+        else:
+            cmd.append("--no-coordinator")
+        cmd += ["--require-unit", "--foreground"]
         log("launching detached: " + " ".join(cmd))
         p = subprocess.run(self.privileged(*cmd), capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
         if p.returncode != 0:
@@ -1020,7 +1149,23 @@ class Cutover:
               f"result: {self.state}/latest/result.json")
         return 0
 
+    def check_cgroup(self) -> None:
+        """The cutover stops the web unit (and with it everything in its cgroup, including the coordinator's
+        pane): refuse to run from inside any unit it stops, and from a detached launch outside its own unit."""
+        try:
+            lines = Path("/proc/self/cgroup").read_text().splitlines()
+        except OSError as e:
+            raise Usage(f"cannot read /proc/self/cgroup: {e}")
+        path = (lines[-1].split(":", 2)[2] if lines and lines[-1].count(":") >= 2 else "")
+        self.result["cgroup"] = path
+        v = self.v
+        if any(u in path for u in (v["OLD_WEB_UNIT"], v["WEB_UNIT"], v["HERDR_UNIT"])):
+            raise Usage(f"this process runs inside a unit the cutover stops ({path}); launch it without --foreground")
+        if self.args.require_unit and path != "/system.slice/herdr-cutover.service":
+            raise Usage(f"not in the herdr-cutover unit's own cgroup ({path}); refusing to run")
+
     def foreground(self) -> int:
+        self.check_cgroup()
         self.lock()
         try:
             try:
@@ -1044,18 +1189,25 @@ class Cutover:
             except Abort as e:
                 log(f"aborted: {e}")
                 return self.finish("aborted", abort_reason=str(e))
+            def on_signal(signum, _frame):
+                raise StepFailed(f"stopped by signal {signum}")
+            old_handlers = {sg: signal.signal(sg, on_signal) for sg in (signal.SIGTERM, signal.SIGHUP)}
             try:
                 self.step4_stop_web()
                 self.step5_deploy()
                 self.step6_herdr()
-            except Exception as e:                      # any failure after the old unit stopped: roll back
-                log(f"FAILED: {e}; rolling back")
+            except BaseException as e:                  # any failure (or stop) after the old unit stopped: roll back
+                for sg in old_handlers:                 # the rollback itself must not be interrupted
+                    signal.signal(sg, signal.SIG_IGN)
+                log(f"FAILED: {e!r}; rolling back")
                 if not isinstance(e, (StepFailed, OSError, RuntimeError)):
                     traceback.print_exc()
                 ok = self.rollback(self.run_dir, self.progress)
                 self.print_relaunch_hint(self.run_dir)
                 return self.finish("rolled_back", abort_reason=str(e), rollback_ok=ok,
                                    rollback_errors=self.progress.get("rollback_errors", []))
+            for sg, h in old_handlers.items():
+                signal.signal(sg, h)
             try:
                 self.relaunch(self.agent_rows())
                 self.step(7, not self.problems)
@@ -1067,6 +1219,7 @@ class Cutover:
                 self.problem(f"unexpected error in steps 7-9: {e}")
             return self.finish("problems" if self.problems else "done", problems=self.problems)
         finally:
+            self.finalize_files()
             self.unlock()
 
     def find_rollback_run(self) -> Path:
@@ -1098,6 +1251,7 @@ class Cutover:
                         rollback_errors=progress.get("rollback_errors", []))
             return 0 if ok else 5
         finally:
+            self.finalize_files()
             self.unlock()
 
 
@@ -1109,13 +1263,19 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--rollback", action="store_true")
     ap.add_argument("--foreground", action="store_true")
+    ap.add_argument("--require-unit", action="store_true")
+    ap.add_argument("--no-coordinator", action="store_true")
     ap.add_argument("--coordinator", default=os.environ.get("HERDR_PANE_ID", ""))
     ap.add_argument("--self", dest="self_path", required=True)
     try:
         args = ap.parse_args(argv)
     except SystemExit:
         return 2
+    os.umask(0)                                          # files for the service user are created 777
     try:
+        if not args.rollback and not args.coordinator and not args.no_coordinator and os.geteuid() == 0:
+            raise Usage("running as root loses HERDR_PANE_ID: pass --coordinator <pane id> "
+                        "(or --no-coordinator when launching from outside herdr)")
         host_env = os.path.abspath(args.host_env)
         c = Cutover(load_host_env(host_env), args)
         if args.rollback:
