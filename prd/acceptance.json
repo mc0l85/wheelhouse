@@ -1383,7 +1383,14 @@
       "network": true,
       "timeout": 300,
       "status": "open",
-      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
+      "evidence": {
+        "at": "2026-11-15T18:30:24-06:00",
+        "rc": 1,
+        "head": "596bcb8",
+        "check": "python3 backend/tests/live/e_checks.py E-1",
+        "tail": "FAIL E-1: Fail: dry run rc=2: cutover.sh: UNIT_DIR is not writable by this user (run as root): /etc/systemd/system\n\n"
+      }
     },
     {
       "id": "E-2",
@@ -1398,8 +1405,15 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 300,
-      "status": "open",
-      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+      "status": "done",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
+      "evidence": {
+        "at": "2026-11-15T18:30:24-06:00",
+        "rc": 0,
+        "head": "596bcb8",
+        "check": "python3 backend/tests/live/e_checks.py E-2",
+        "tail": "PASS E-2: {\"server_pid\": 909242, \"cgroup\": \"/system.slice/herdr.service\"}\n"
+      }
     },
     {
       "id": "E-3",
@@ -1414,9 +1428,16 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 300,
-      "status": "open",
+      "status": "done",
       "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
-      "mutates": "restarts WEB_UNIT once (sudo -n systemctl restart). Refuses (exit 3, nothing touched) unless HW_E3_RESTART_OK=1 AND E-2 holds at that moment. Never part of prove-red; run it only after the cutover, with the owner's authorization for the restart."
+      "mutates": "restarts WEB_UNIT once (sudo -n systemctl restart). Refuses (exit 3, nothing touched) unless HW_E3_RESTART_OK=1 AND E-2 holds at that moment. Never part of prove-red; run it only after the cutover, with the owner's authorization for the restart.",
+      "evidence": {
+        "at": "2026-11-15T18:31:47-06:00",
+        "rc": 0,
+        "head": "596bcb8",
+        "check": "python3 backend/tests/live/e_checks.py E-3",
+        "tail": "PASS E-3: {\"server_pid\": 909242, \"panes\": 10}\n"
+      }
     },
     {
       "id": "E-4",
@@ -1432,7 +1453,14 @@
       "network": true,
       "timeout": 300,
       "status": "open",
-      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
+      "evidence": {
+        "at": "2026-11-15T18:30:29-06:00",
+        "rc": 1,
+        "head": "596bcb8",
+        "check": "python3 backend/tests/live/e_checks.py E-4",
+        "tail": "FAIL E-4: Fail: w65675d028695f2:p3C: session id differs\n"
+      }
     },
     {
       "id": "E-5",
@@ -1447,8 +1475,15 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 300,
-      "status": "open",
-      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+      "status": "done",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
+      "evidence": {
+        "at": "2026-11-15T18:30:29-06:00",
+        "rc": 0,
+        "head": "596bcb8",
+        "check": "python3 backend/tests/live/e_checks.py E-5",
+        "tail": "PASS E-5: {\"revision\": \"7dc791244e83\", \"assets\": 2}\n"
+      }
     },
     {
       "id": "E-6",
@@ -1463,8 +1498,15 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 300,
-      "status": "open",
-      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+      "status": "done",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
+      "evidence": {
+        "at": "2026-11-15T18:30:29-06:00",
+        "rc": 0,
+        "head": "596bcb8",
+        "check": "python3 backend/tests/live/e_checks.py E-6",
+        "tail": "PASS E-6: {\"guard\": {\"code\": 4503, \"server_appeared\": false}}\n"
+      }
     },
     {
       "id": "E-7",
@@ -1479,8 +1521,15 @@
       "builder": "sonnet",
       "network": true,
       "timeout": 300,
-      "status": "open",
-      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)"
+      "status": "done",
+      "host": "the cutover host: HOST_NAME in $HW_HOST_ENV (the check refuses on any other machine)",
+      "evidence": {
+        "at": "2026-11-15T18:30:29-06:00",
+        "rc": 0,
+        "head": "596bcb8",
+        "check": "python3 backend/tests/live/e_checks.py E-7",
+        "tail": "PASS E-7: {\"script\": \"/home/mckay/.local/bin/herdr-update.sh\"}\n"
+      }
     },
     {
       "id": "V-1",
