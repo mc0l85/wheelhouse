@@ -58,6 +58,12 @@ class Settings:
     push_private: bool = os.environ.get("HERDRWEB_PUSH_PRIVATE", "0") == "1"
     # Pasted images are saved under <state_dir>/uploads (kept 7 days / 200 files).
     upload_max_mb: int = int(os.environ.get("HERDRWEB_UPLOAD_MAX_MB", "20"))
+    # Update check: compare the running build with the newest commit on GitHub (api.github.com,
+    # unauthenticated, at most once per build per 6 h). HERDRWEB_UPDATE_CHECK=0 turns it off for
+    # every browser; each browser can also turn it off in Controls.
+    update_check: bool = os.environ.get("HERDRWEB_UPDATE_CHECK", "1") != "0"
+    update_repo: str = os.environ.get("HERDRWEB_UPDATE_REPO", "mc0l85/wheelhouse")
+    update_branch: str = os.environ.get("HERDRWEB_UPDATE_BRANCH", "main")
     # Built SPA (vite build output). Served as static when present.
     static_dir: str = os.environ.get(
         "HERDRWEB_STATIC", os.path.join(os.path.dirname(__file__), "..", "static"))

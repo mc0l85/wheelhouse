@@ -7,6 +7,7 @@ import type { Health } from "../api/types";
 import { disablePush, enablePush, pushState, type PushState } from "../push";
 import { rendererPref, setRendererPref, termStats, type TermApi } from "../hooks/useHerdrTerminal";
 import { ArrowRow, ComboRow, KeyRow, type Mods, noBlur, ShortcutRow, SymbolRow } from "./Keys";
+import { BUILD_SHA, type UpdateInfo } from "../updateCheck";
 
 interface Props {
   api: MutableRefObject<TermApi | null>;
@@ -21,6 +22,34 @@ interface Props {
   onPaste: () => void;
   onImage: (img: Blob) => void;   // a picked photo/file, uploaded like a pasted image
   flash: (msg: string, bad?: boolean) => void;
+  update: { on: boolean; info: UpdateInfo | null; toggle: (on: boolean) => void };
+}
+
+function UpdateRow({ update }: { update: Props["update"] }) {
+  const u = update.info;
+  let hint = "off — this browser won't check GitHub for a newer Wheelhouse";
+  if (update.on) {
+    if (!BUILD_SHA) hint = "this build doesn't know its commit, so it can't compare";
+    else if (!u) hint = "checking…";
+    else if (!u.enabled) hint = "turned off on the server (HERDRWEB_UPDATE_CHECK=0)";
+    else if (u.status === "behind") hint = `${u.behind_by} new commit${u.behind_by === 1 ? "" : "s"} on GitHub — newest: ${u.latest_message || u.latest}`;
+    else if (u.status === "current") hint = `up to date (${u.running})${u.note ? ` — ${u.note}` : ""}`;
+    else if (u.status === "unknown") hint = `build ${u.running} isn't on GitHub (local build) — can't compare`;
+    else hint = "couldn't reach GitHub — will try again later";
+  }
+  return (
+    <>
+      <div className="pop-h">Updates</div>
+      <div className="key-grid">
+        <button {...noBlur} className={`kb wide ${update.on ? "on" : ""}`} onClick={() => update.toggle(!update.on)}>
+          ⬆ Check GitHub: {update.on ? "On — turn off" : "Off — turn on"}</button>
+        {update.on && u?.status === "behind" && u.url && (
+          <a {...noBlur} className="kb wide" href={u.url} target="_blank" rel="noopener noreferrer">What's new ↗</a>
+        )}
+      </div>
+      <div className="pop-hint">{hint}</div>
+    </>
+  );
 }
 
 const PUSH_HINT: Record<PushState, string> = {
@@ -117,6 +146,7 @@ export function Controls(p: Props) {
       </div>
       <div className="pop-hint">drag = select + copy · Shift-drag = raw select · Ctrl+Shift+V = paste (text or image)</div>
       <NotifyRow flash={p.flash} />
+      <UpdateRow update={p.update} />
       <div className="pop-h">Session</div>
       <div className="pop-info">
         <span>session: {p.health?.session ?? "?"}</span>

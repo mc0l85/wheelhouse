@@ -10,6 +10,7 @@ import { type HerdrEvent, useHerdrEvents } from "./hooks/useHerdrEvents";
 import { copyText, useHerdrTerminal } from "./hooks/useHerdrTerminal";
 import { pasteImage, readClipboard } from "./paste";
 import type { ConnInfo, ConnState } from "./types/term";
+import { type UpdateInfo, useUpdateCheck } from "./updateCheck";
 
 // herdr renders its own workspace/tab/pane chrome inside the TUI, so the page is
 // one slim bar (pane selector · Controls) over a full-bleed live herdr terminal.
@@ -45,6 +46,14 @@ export default function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), bad ? 3000 : 1500);
   }, []);
+
+  // A newer Wheelhouse on GitHub: one long toast per new commit; the dot on Controls stays.
+  const onNewVersion = useCallback((u: UpdateInfo) => {
+    setToast({ msg: `Wheelhouse update on GitHub: ${u.behind_by} new commit${u.behind_by === 1 ? "" : "s"} — see Controls`, bad: false });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 6000);
+  }, []);
+  const update = useUpdateCheck(onNewVersion);
 
   const session = health?.session ?? "default";
   const interactive = !!health?.writes_enabled;
@@ -280,6 +289,7 @@ export default function App() {
         <button {...noBlur} data-trigger className={`trig trig-ctl ${open === "controls" ? "on" : ""}`}
           onClick={() => toggle("controls")}>
           {(!health || !health.server_running) && <span className="sdot s-blocked" />}
+          {health?.server_running && update.available && <span className="sdot s-update" title="update available on GitHub" />}
           Controls <span className="caret">▾</span>
         </button>
       </header>
@@ -302,7 +312,7 @@ export default function App() {
       {open === "controls" && (
         <Controls api={apiRef} health={health} paneCount={panes.length} touch={IS_TOUCH}
           mods={mods} setMods={setMods} pinned={pinned} setPinned={setPinned}
-          onCopy={copyPane} onPaste={paste} onImage={onPasteImage} flash={flash} />
+          onCopy={copyPane} onPaste={paste} onImage={onPasteImage} flash={flash} update={update} />
       )}
       {toast && <div className={`toast ${toast.bad ? "bad" : ""}`}>{toast.msg}</div>}
     </div>

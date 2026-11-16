@@ -49,6 +49,7 @@ html, body { position: fixed; inset: 0; overscroll-behavior: none; }
 .s-idle { background: var(--text-faint); }
 .s-working { background: var(--green); }
 .s-blocked { background: var(--red); animation: sdot-pulse 1.4s ease-in-out infinite; }
+.s-update { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
 .s-unknown, .s-done { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-faint); }
 @keyframes sdot-pulse { 50% { opacity: .35; } }
 
