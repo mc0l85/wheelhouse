@@ -363,7 +363,7 @@
         "rc": 0,
         "head": "a5b8883",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b3.py",
-        "tail": ".....                                                                    [100%]\n=============================== warnings summary ===============================\n.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /tempfs/hw-lane-a/backend/.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n5 passed, 1 warning in 0.66s\n"
+        "tail": ".....                                                                    [100%]\n=============================== warnings summary ===============================\n.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1\n  <worktree>/backend/.venv-test/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n5 passed, 1 warning in 0.66s\n"
       }
     },
     {
@@ -527,7 +527,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c1.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c1.test.ts (9 tests) 11ms\n\n Test Files  1 passed (1)\n      Tests  9 passed (9)\n   Start at  18:54:27\n   Duration  1.99s (transform 107ms, setup 0ms, collect 52ms, tests 11ms, environment 882ms, prepare 273ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c1.test.ts (9 tests) 11ms\n\n Test Files  1 passed (1)\n      Tests  9 passed (9)\n   Start at  18:54:27\n   Duration  1.99s (transform 107ms, setup 0ms, collect 52ms, tests 11ms, environment 882ms, prepare 273ms)\n\n"
       }
     },
     {
@@ -585,7 +585,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c3.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c3.test.ts (12 tests) 16ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  18:54:52\n   Duration  1.44s (transform 133ms, setup 0ms, collect 119ms, tests 16ms, environment 770ms, prepare 154ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c3.test.ts (12 tests) 16ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  18:54:52\n   Duration  1.44s (transform 133ms, setup 0ms, collect 119ms, tests 16ms, environment 770ms, prepare 154ms)\n\n"
       }
     },
     {
@@ -613,7 +613,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c4.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c4.test.ts (10 tests) 10ms\n\n Test Files  1 passed (1)\n      Tests  10 passed (10)\n   Start at  18:54:55\n   Duration  1.82s (transform 92ms, setup 0ms, collect 67ms, tests 10ms, environment 667ms, prepare 269ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c4.test.ts (10 tests) 10ms\n\n Test Files  1 passed (1)\n      Tests  10 passed (10)\n   Start at  18:54:55\n   Duration  1.82s (transform 92ms, setup 0ms, collect 67ms, tests 10ms, environment 667ms, prepare 269ms)\n\n"
       }
     },
     {
@@ -642,7 +642,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c5.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c5.test.ts (7 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  7 passed (7)\n   Start at  18:54:58\n   Duration  1.37s (transform 143ms, setup 0ms, collect 116ms, tests 32ms, environment 705ms, prepare 154ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c5.test.ts (7 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  7 passed (7)\n   Start at  18:54:58\n   Duration  1.37s (transform 143ms, setup 0ms, collect 116ms, tests 32ms, environment 705ms, prepare 154ms)\n\n"
       }
     },
     {
@@ -671,7 +671,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c6.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c6.test.ts (5 tests) 39ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  18:55:01\n   Duration  1.44s (transform 192ms, setup 0ms, collect 184ms, tests 39ms, environment 681ms, prepare 139ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c6.test.ts (5 tests) 39ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  18:55:01\n   Duration  1.44s (transform 192ms, setup 0ms, collect 184ms, tests 39ms, environment 681ms, prepare 139ms)\n\n"
       }
     },
     {
@@ -700,7 +700,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c7.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c7.test.ts (4 tests) 31ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  18:55:03\n   Duration  1.41s (transform 159ms, setup 0ms, collect 156ms, tests 31ms, environment 666ms, prepare 134ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c7.test.ts (4 tests) 31ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  18:55:03\n   Duration  1.41s (transform 159ms, setup 0ms, collect 156ms, tests 31ms, environment 666ms, prepare 134ms)\n\n"
       }
     },
     {
@@ -729,7 +729,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c8.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c8.test.ts (3 tests) 29ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  18:55:06\n   Duration  1.99s (transform 211ms, setup 0ms, collect 188ms, tests 29ms, environment 1.18s, prepare 223ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c8.test.ts (3 tests) 29ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  18:55:06\n   Duration  1.99s (transform 211ms, setup 0ms, collect 188ms, tests 29ms, environment 1.18s, prepare 223ms)\n\n"
       }
     },
     {
@@ -758,7 +758,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c9.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c9.test.ts (2 tests) 26ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  18:55:09\n   Duration  1.78s (transform 179ms, setup 0ms, collect 129ms, tests 26ms, environment 903ms, prepare 271ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c9.test.ts (2 tests) 26ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  18:55:09\n   Duration  1.78s (transform 179ms, setup 0ms, collect 129ms, tests 26ms, environment 903ms, prepare 271ms)\n\n"
       }
     },
     {
@@ -787,7 +787,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c10.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c10.test.ts (3 tests) 26ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  18:55:12\n   Duration  1.38s (transform 147ms, setup 0ms, collect 113ms, tests 26ms, environment 706ms, prepare 183ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c10.test.ts (3 tests) 26ms\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  18:55:12\n   Duration  1.38s (transform 147ms, setup 0ms, collect 113ms, tests 26ms, environment 706ms, prepare 183ms)\n\n"
       }
     },
     {
@@ -816,7 +816,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c11.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c11.test.ts (6 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:55:14\n   Duration  1.30s (transform 129ms, setup 0ms, collect 120ms, tests 32ms, environment 644ms, prepare 142ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c11.test.ts (6 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:55:14\n   Duration  1.30s (transform 129ms, setup 0ms, collect 120ms, tests 32ms, environment 644ms, prepare 142ms)\n\n"
       }
     },
     {
@@ -845,7 +845,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c12.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c12.test.ts (4 tests) 27ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  18:55:17\n   Duration  1.32s (transform 169ms, setup 0ms, collect 123ms, tests 27ms, environment 691ms, prepare 145ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c12.test.ts (4 tests) 27ms\n\n Test Files  1 passed (1)\n      Tests  4 passed (4)\n   Start at  18:55:17\n   Duration  1.32s (transform 169ms, setup 0ms, collect 123ms, tests 27ms, environment 691ms, prepare 145ms)\n\n"
       }
     },
     {
@@ -874,7 +874,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c13.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c13.test.ts (6 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:55:19\n   Duration  1.33s (transform 133ms, setup 0ms, collect 122ms, tests 32ms, environment 665ms, prepare 127ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c13.test.ts (6 tests) 32ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:55:19\n   Duration  1.33s (transform 133ms, setup 0ms, collect 122ms, tests 32ms, environment 665ms, prepare 127ms)\n\n"
       }
     },
     {
@@ -903,7 +903,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/c14.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/c14.test.ts (6 tests) 29ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:55:21\n   Duration  1.44s (transform 132ms, setup 0ms, collect 132ms, tests 29ms, environment 722ms, prepare 144ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/c14.test.ts (6 tests) 29ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:55:21\n   Duration  1.44s (transform 132ms, setup 0ms, collect 132ms, tests 29ms, environment 722ms, prepare 144ms)\n\n"
       }
     },
     {
@@ -992,7 +992,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d1.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/d1.test.ts (5 tests) 294ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  18:56:32\n   Duration  1.96s (transform 170ms, setup 0ms, collect 100ms, tests 294ms, environment 943ms, prepare 263ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/d1.test.ts (5 tests) 294ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  18:56:32\n   Duration  1.96s (transform 170ms, setup 0ms, collect 100ms, tests 294ms, environment 943ms, prepare 263ms)\n\n"
       }
     },
     {
@@ -1021,7 +1021,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d2.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/d2.test.ts (5 tests) 238ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  18:56:36\n   Duration  2.49s (transform 131ms, setup 0ms, collect 91ms, tests 238ms, environment 1.09s, prepare 257ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/d2.test.ts (5 tests) 238ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)\n   Start at  18:56:36\n   Duration  2.49s (transform 131ms, setup 0ms, collect 91ms, tests 238ms, environment 1.09s, prepare 257ms)\n\n"
       }
     },
     {
@@ -1050,7 +1050,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d3.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/d3.test.ts (17 tests) 25ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  18:56:40\n   Duration  1.72s (transform 154ms, setup 0ms, collect 101ms, tests 25ms, environment 678ms, prepare 249ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/d3.test.ts (17 tests) 25ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  18:56:40\n   Duration  1.72s (transform 154ms, setup 0ms, collect 101ms, tests 25ms, environment 678ms, prepare 249ms)\n\n"
       }
     },
     {
@@ -1079,7 +1079,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d4.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/d4.test.ts (2 tests) 13ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  18:56:43\n   Duration  1.31s (transform 107ms, setup 0ms, collect 89ms, tests 13ms, environment 671ms, prepare 131ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/d4.test.ts (2 tests) 13ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  18:56:43\n   Duration  1.31s (transform 107ms, setup 0ms, collect 89ms, tests 13ms, environment 671ms, prepare 131ms)\n\n"
       }
     },
     {
@@ -1108,7 +1108,7 @@
         "rc": 0,
         "head": "dfeeb93",
         "check": "cd frontend && PATH=$HOME/.local/bin:$PATH npx vitest run test/acceptance/d5.test.ts",
-        "tail": "\n RUN  v2.1.9 /tempfs/hw-lane-f/frontend\n\n \u2713 test/acceptance/d5.test.ts (2 tests) 13ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  18:56:46\n   Duration  1.34s (transform 105ms, setup 0ms, collect 90ms, tests 13ms, environment 691ms, prepare 163ms)\n\n"
+        "tail": "\n RUN  v2.1.9 <worktree>/frontend\n\n \u2713 test/acceptance/d5.test.ts (2 tests) 13ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  18:56:46\n   Duration  1.34s (transform 105ms, setup 0ms, collect 90ms, tests 13ms, environment 691ms, prepare 163ms)\n\n"
       }
     },
     {
@@ -1528,7 +1528,7 @@
         "rc": 0,
         "head": "6c64684",
         "check": "python3 backend/tests/live/e_checks.py E-7",
-        "tail": "PASS E-7: {\"script\": \"/home/mckay/.local/bin/herdr-update.sh\"}\n"
+        "tail": "PASS E-7: {\"script\": \"~/.local/bin/herdr-update.sh\"}\n"
       }
     },
     {
