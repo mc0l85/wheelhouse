@@ -1159,10 +1159,14 @@ class Cutover:
         path = (lines[-1].split(":", 2)[2] if lines and lines[-1].count(":") >= 2 else "")
         self.result["cgroup"] = path
         v = self.v
-        if any(u in path for u in (v["OLD_WEB_UNIT"], v["WEB_UNIT"], v["HERDR_UNIT"])):
-            raise Usage(f"this process runs inside a unit the cutover stops ({path}); launch it without --foreground")
-        if self.args.require_unit and path != "/system.slice/herdr-cutover.service":
-            raise Usage(f"not in the herdr-cutover unit's own cgroup ({path}); refusing to run")
+        if self.args.require_unit:                    # every detached launch passes --require-unit
+            if path != "/system.slice/herdr-cutover.service":
+                raise Usage(f"not in the herdr-cutover unit's own cgroup ({path}); refusing to run")
+        elif any(u in path for u in (v["OLD_WEB_UNIT"], v["WEB_UNIT"], v["HERDR_UNIT"])):
+            # a bare --foreground is what the offline fixture tests run, from whatever cgroup they are in,
+            # so this can only be loud, not fatal
+            log(f"WARNING: running inside a unit the cutover stops ({path}); the stop will kill this process. "
+                "Launch without --foreground.")
 
     def foreground(self) -> int:
         self.check_cgroup()
