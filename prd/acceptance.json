@@ -461,11 +461,11 @@
         "head": "8bef0c3"
       },
       "evidence": {
-        "at": "2026-11-15T18:04:17-06:00",
+        "at": "2026-11-15T18:18:45-06:00",
         "rc": 0,
-        "head": "a28fdbb",
+        "head": "95c0341",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_b6.py",
-        "tail": "...........................                                              [100%]\n27 passed in 0.09s\n"
+        "tail": "...........................                                              [100%]\n27 passed in 0.08s\n"
       }
     },
     {
@@ -1172,11 +1172,11 @@
         "head": "8bef0c3"
       },
       "evidence": {
-        "at": "2026-11-15T18:04:24-06:00",
+        "at": "2026-11-15T18:18:53-06:00",
         "rc": 0,
-        "head": "a28fdbb",
+        "head": "95c0341",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef1_manifest.py",
-        "tail": "......                                                                   [100%]\n6 passed in 6.05s\n"
+        "tail": "......                                                                   [100%]\n6 passed in 6.99s\n"
       }
     },
     {
@@ -1210,11 +1210,11 @@
         "head": "8bef0c3"
       },
       "evidence": {
-        "at": "2026-11-15T18:04:59-06:00",
+        "at": "2026-11-15T18:19:32-06:00",
         "rc": 0,
-        "head": "a28fdbb",
+        "head": "95c0341",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef2_idle_gate.py",
-        "tail": ".....                                                                    [100%]\n5 passed in 34.73s\n"
+        "tail": ".....                                                                    [100%]\n5 passed in 38.31s\n"
       }
     },
     {
@@ -1248,11 +1248,11 @@
         "head": "8bef0c3"
       },
       "evidence": {
-        "at": "2026-11-15T18:05:22-06:00",
+        "at": "2026-11-15T18:19:53-06:00",
         "rc": 0,
-        "head": "a28fdbb",
+        "head": "95c0341",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef3_quit_stop_deploy.py",
-        "tail": ".........                                                                [100%]\n9 passed in 22.40s\n"
+        "tail": ".........                                                                [100%]\n9 passed in 19.94s\n"
       }
     },
     {
@@ -1286,11 +1286,11 @@
         "head": "8bef0c3"
       },
       "evidence": {
-        "at": "2026-11-15T18:06:05-06:00",
+        "at": "2026-11-15T18:20:35-06:00",
         "rc": 0,
-        "head": "a28fdbb",
+        "head": "95c0341",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef4_relaunch_resume.py",
-        "tail": "......                                                                   [100%]\n6 passed in 41.57s\n"
+        "tail": "......                                                                   [100%]\n6 passed in 41.32s\n"
       }
     },
     {
@@ -1324,11 +1324,11 @@
         "head": "8bef0c3"
       },
       "evidence": {
-        "at": "2026-11-15T18:06:24-06:00",
+        "at": "2026-11-15T18:20:52-06:00",
         "rc": 0,
-        "head": "a28fdbb",
+        "head": "95c0341",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef5_rollback.py",
-        "tail": "...                                                                      [100%]\n3 passed in 19.00s\n"
+        "tail": "...                                                                      [100%]\n3 passed in 16.39s\n"
       }
     },
     {
@@ -1362,11 +1362,11 @@
         "head": "8bef0c3"
       },
       "evidence": {
-        "at": "2026-11-15T18:06:26-06:00",
+        "at": "2026-11-15T18:20:55-06:00",
         "rc": 0,
-        "head": "a28fdbb",
+        "head": "95c0341",
         "check": "cd backend && PYTHONDONTWRITEBYTECODE=1 .venv-test/bin/python -m pytest -q -p no:cacheprovider -W ignore::DeprecationWarning tests/acceptance/test_ef6_update_script.py",
-        "tail": "....                                                                     [100%]\n4 passed in 0.93s\n"
+        "tail": "....                                                                     [100%]\n4 passed in 2.09s\n"
       }
     },
     {
