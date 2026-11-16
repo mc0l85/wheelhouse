@@ -114,6 +114,21 @@ function diff(from: string, to: string): string {
   return "\x7f".repeat(a.length - i) + b.slice(i).join("");
 }
 
+/** The keyboard's double-space shortcut: one space (plain or NBSP) in the textarea replaced by "." or ". ". */
+function isPeriodShortcut(before: string, s0: number, e0: number, after: string): boolean {
+  let gone: string, put: string;
+  if (s0 < e0) {
+    gone = before.slice(s0, e0);
+    put = after.slice(s0, after.length - (before.length - e0));
+  } else {
+    let i = 0;
+    while (i < before.length && i < after.length && before[i] === after[i]) i++;
+    gone = before.slice(i);
+    put = after.slice(i);
+  }
+  return /^[  ]$/.test(gone) && /^\.[  ]?$/.test(put);
+}
+
 /** diff() over composed text whose first letter may have gone out modified. */
 function diffComp(s: ComposerState, from: string, to: string): { send: string; lead: ComposerState["lead"] } {
   const lead = s.lead;
@@ -271,7 +286,13 @@ export function reduce(state: ComposerState, event: ComposerEvent): ComposerResu
       if (s.replPending && event.inputType === "insertReplacementText") {
         const { before, s0, e0 } = s.replPending;
         const v = event.ta.value;
-        if (s0 >= e0) {
+        if (isPeriodShortcut(before, s0, e0, v)) {
+          // iPadOS/iOS "." shortcut. Keys xterm sends itself (letters) never reach the textarea, but
+          // spaces do, so the textarea can hold two spaces in a row after one press ("I am " is " I ").
+          // The keyboard then swaps the earlier space for "." — the pane already has exactly the keys
+          // pressed: send nothing, and drop the stale textarea so it cannot fire again.
+          s = { ...s, replPending: null, clearOnInput: true };
+        } else if (s0 >= e0) {
           if (s0 === before.length) send += diff(before, v);    // caret was at the end: a tail replacement
           else {
             effects.push({ type: "toast", msg: "edit not sent: autocorrect changed earlier text" });
