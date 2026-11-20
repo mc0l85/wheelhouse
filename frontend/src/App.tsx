@@ -8,6 +8,7 @@ import { ArrowRow, ComboRow, KeyRow, type Mods, noBlur, ShortcutRow } from "./co
 import { PaneSelector, paneName } from "./components/PaneSelector";
 import { type HerdrEvent, useHerdrEvents } from "./hooks/useHerdrEvents";
 import { copyText, useHerdrTerminal } from "./hooks/useHerdrTerminal";
+import { hardRefresh } from "./hardRefresh";
 import { pasteImage, readClipboard } from "./paste";
 import type { ConnInfo, ConnState } from "./types/term";
 import { type UpdateInfo, useUpdateCheck } from "./updateCheck";
@@ -39,6 +40,7 @@ export default function App() {
   const [connMsg, setConnMsg] = useState("");
   const [scroll, setScroll] = useState<Record<string, PaneScroll>>({});
   const [badgePulse, setBadgePulse] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const toastTimer = useRef(0);
 
   const flash = useCallback((msg: string, bad = false) => {
@@ -262,6 +264,11 @@ export default function App() {
           <button {...noBlur} data-trigger className={`badge-btn ${badgePulse ? "pulse" : ""} ${open === "inbox" ? "on" : ""}`}
             title="blocked agents — tap to answer" onClick={() => toggle("inbox")}>⚠ {blocked}</button>
         )}
+        <span className="bar-grow" />
+        <button {...noBlur} className={`trig trig-refresh ${refreshing ? "on spinning" : ""}`}
+          title="hard refresh — reload the page and pull the latest Wheelhouse"
+          disabled={refreshing}
+          onClick={() => { setRefreshing(true); void hardRefresh(); }}>⟳</button>
         <span className="bar-grow" />
         {scrolledUp > 0 && (
           <button {...noBlur} className="bar-chip scroll-chip" title="scrolled back — tap to return to the bottom"

@@ -167,6 +167,9 @@ html, body { position: fixed; inset: 0; overscroll-behavior: none; }
 }
 .scroll-chip { color: #04070e; background: var(--cyan); }
 .trig-zoom { justify-content: center; padding: 0 10px; font-size: 16px; }
+.trig-refresh { justify-content: center; padding: 0 12px; font-size: 18px; }
+.trig-refresh.spinning { color: var(--cyan); animation: refresh-spin .8s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
 
 .toast.bad { background: var(--red); color: #fff; }
 
